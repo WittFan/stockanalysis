@@ -11,3 +11,6 @@ for i in stock_list["ts_code"][1::]:
     print(i)
     df = pro.balancesheet(ts_code=i, fields='ts_code,end_date,report_type,comp_type,total_hldr_eqy_exc_min_int')
     equity_history = pd.append(df, ignore_index=True)
+
+if __name__ == '__main__':
+    pass
