@@ -6,25 +6,7 @@ def create_table():
     """创建表"""
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
-    # 创建股票列表stock_basic
-    sql = """create table if not exists stock_basic(
-            ts_code varchar(32) PRIMARY KEY not null,
-            symbol varchar(32) not null,
-            name varchar(32) not null,
-            area varchar(32) not null,
-            industry varchar(32) not null,
-            fullname varchar(32) not null,
-            enname varchar(32) not null,
-            cnspell varchar(32) not null,
-            market varchar(32) not null,
-            exchange varchar(32) not null,
-            curr_type varchar(32) not null,
-            list_status varchar(32) not null,
-            list_date varchar(32) not null,
-            delist_date varchar(32) not null,
-            is_hs varchar(32) not null;"""
-    c.execute(sql)
-    # 创建表index_dailybasic表
+    "创建表index_dailybasic表"
     sql = """create table if not exists index_dailybasic(
         ts_code_trade_date varchar(32) PRIMARY KEY not null,
         ts_code varchar(32) not null,
