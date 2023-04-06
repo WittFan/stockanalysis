@@ -6,7 +6,7 @@ def create_table():
     """创建表"""
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
-    # 创建股票列表stock_basic
+    # 1.创建股票列表stock_basic
     sql = """create table if not exists stock_basic(
             ts_code varchar(32) PRIMARY KEY not null,
             symbol varchar(32) not null,
@@ -24,6 +24,78 @@ def create_table():
             delist_date varchar(32) not null,
             is_hs varchar(32) not null;"""
     c.execute(sql)
+    # 2.创建交易日历trade_cal
+    sql = """create table if not exists trade_cal(
+            exchange_cal_date varchar(32) PRIMARY KEY not null,
+            exchange varchar(32) not null,
+            cal_date varchar(32) not null,
+            is_open varchar(32) not null,
+            pretrade_date varchar(32) not null;"""
+    c.execute(sql)
+    # 3.创建股票曾用名namechange
+    sql = """create table if not exists namechange(
+                ts_code_ann_date varchar(32) PRIMARY KEY not null,
+                name varchar(32) not null,
+                start_date varchar(32) not null,
+                end_date varchar(32) not null,
+                ann_date varchar(32) not null,
+                change_reason varchar(32) not null;"""
+    c.execute(sql)
+    # 4.创建沪深股通成份股hs_const
+    sql = """create table if not exists hs_const(
+                    ts_code_in_date_out_date varchar(32) PRIMARY KEY not null,
+                    ts_code varchar(32) not null,
+                    hs_type varchar(32) not null,
+                    in_date varchar(32) not null,
+                    out_date varchar(32) not null,
+                    is_new varchar(32) not null;"""
+    c.execute(sql)
+    # 5.上市公司基本信息stock_company
+    sql = """create table if not exists stock_company(
+            ts_code varchar(32) PRIMARY KEY not null,
+            exchange varchar(32) not null,
+            chairman varchar(32) not null,
+            manager varchar(32) not null,
+            secretary varchar(32) not null,
+            reg_capital float not null,
+            setup_date varchar(32) not null,
+            province varchar(32) not null,
+            city varchar(32) not null,
+            introduction varchar(32) not null,
+            website varchar(32) not null,
+            email varchar(32) not null,
+            office varchar(32) not null,
+            employees float not null,
+            main_business varchar(32) not null,
+            business_scope varchar(32) not null);"""
+    c.execute(sql)
+    # 6.管理层薪酬和持股stk_rewards
+    sql = """create table if not exists stk_rewards(
+                ts_code_name_title_ann_date varchar(32) PRIMARY KEY not null,
+                ts_code varchar(32) not null,
+                ann_date varchar(32) not null,
+                end_date varchar(32) not null,
+                name varchar(32) not null,
+                title varchar(32) not null,
+                reward float not null,
+                hold_vol float not null;"""
+    c.execute(sql)
+    # 7.股东增减持stk_holdertrade
+    sql = """create table if not exists stk_holdertrade(
+            ts_code_ann_date_holder_name varchar(32) PRIMARY KEY not null,
+            ts_code varchar(32) not null,
+            ann_date varchar(32) not null,
+            holder_name varchar(32) not null,
+            holder_type varchar(32) not null,
+            in_de varchar(32) not null,
+            change_vol float not null,
+            change_ratio float not null,
+            after_share float not null,
+            after_ratio float not null,
+            avg_price float not null,
+            total_share float not null,
+            begin_date varchar(32) not null),
+            close_date varchar(32) not null);"""
     # 创建表index_dailybasic表
     sql = """create table if not exists index_dailybasic(
         ts_code_trade_date varchar(32) PRIMARY KEY not null,
