@@ -60,7 +60,7 @@ class DataApi:
 
 if __name__ == '__main__':
     pass
-    delete_table('stock_basic')
+    delete_table('namechange')
     ### 删除数据
     # from TushareApi import TushareApi
     # api = TushareApi()

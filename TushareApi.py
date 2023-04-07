@@ -49,6 +49,39 @@ class TushareApi:
         except sqlite3.IntegrityError:
             print('stock_basic已经存在或%s' %sqlite3.IntegrityError)
 
+    def pull_trade_cal_all(self):
+        df = self.pro.trade_cal()
+        df['exchange_cal_date'] = df.apply(lambda x: x['exchange'] + str(x['cal_date']), axis=1)
+        try:
+            sqlite_data.write(df, 'trade_cal')
+        except sqlite3.IntegrityError:
+            print('trade_cal已经存在或%s' %sqlite3.IntegrityError)
+
+    def pull_namechange_all(self):
+        df = self.pro.namechange()
+        try:
+            sqlite_data.write(df, 'namechange')
+        except sqlite3.IntegrityError:
+            print('namechange已经存在或%s' % sqlite3.IntegrityError)
+
+    def pull_hs_const_all(self):
+        pass
+
+    def pull_stock_company_all(self):
+        pass
+
+    def pull_index_basic_all(self):
+        pass
+
+    def pull_index_classify_all(self):
+        pass
+
+    def pull_index_member_all(self):
+        pass
+
+    def pull_fx_obasic_all(self):
+        pass
+
     def pull_index_dailybasic_all_data(self):
         # 拉取大盘指数每日指标index_dailybasic到本地，并存储
         for ts_code in self.ts_code_set:
@@ -88,6 +121,13 @@ class TushareApi:
         :return:
         """
         self.pull_stock_basic_all()
+        self.pull_trade_cal_all()
+        self.pull_namechange_all()
+        self.pull_hs_const_all()
+        self.pull_stock_company_all()
+        self.pull_index_classify_all()
+        self.pull_index_member_all()
+        self.pull_fx_obasic_all()
 
     def pull_all_data_detail(self):
         """
@@ -139,5 +179,5 @@ class TushareApi:
 if __name__ == '__main__':
     # ts_code, start_date, end_date = '000001.SH', '2004011', '20230325'
     tushare_api = TushareApi()
-    tushare_api.pull_stock_basic_all()
+    tushare_api.pull_namechange_all()
     #df = index_daily_basic.read_data(ts_code, start_date, end_date)

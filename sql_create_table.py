@@ -29,18 +29,19 @@ def create_table():
         exchange varchar(32) not null,
         cal_date varchar(32) not null,
         is_open varchar(32) not null,
-        pretrade_date varchar(32) not null);"""
+        pretrade_date varchar(32));"""
     c.execute(sql)
 
     # 3.创建股票曾用名namechange
     sql = """create table if not exists namechange(
-        ts_code_ann_date varchar(32) PRIMARY KEY not null,
+        ts_code varchar(32) not null,
         name varchar(32) not null,
         start_date varchar(32) not null,
-        end_date varchar(32) not null,
-        ann_date varchar(32) not null,
+        end_date varchar(32),
+        ann_date varchar(32),
         change_reason varchar(32) not null);"""
     c.execute(sql)
+
     # 4.创建沪深股通成份股hs_const
     sql = """create table if not exists hs_const(
         ts_code_in_date_out_date varchar(32) PRIMARY KEY not null,
