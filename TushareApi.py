@@ -82,8 +82,18 @@ class TushareApi:
             except sqlite3.IntegrityError:
                 print('%s已经存在' %ts_code)
 
-    def pull_all_data(self):
-        # 所有全量数据拉取到本地，并存储
+    def pull_all_data_basic(self):
+        """
+        tushare所有全量数据拉取到本地并存储，基本信息部分
+        :return:
+        """
+        self.pull_stock_basic_all()
+
+    def pull_all_data_detail(self):
+        """
+        tushare所有全量数据拉取到本地并存储，明细表部分
+        :return:
+        """
         self.pull_stock_basic_all()
         self.pull_index_dailybasic_all_data()
         self.pull_index_daily_all_data()
@@ -102,7 +112,7 @@ class TushareApi:
             df = self.get_daily_data(start_date, end_date)
             update_date = df.iloc[-1, 1]
             update_date = update_date[0:4]+'-'+update_date[4:6]+'-'+update_date[6:8]
-            df = self.set_primary_key(df)
+            df['ts_code_trade_date'] = df.apply(lambda x: x['ts_code'] + str(x['trade_date']), axis=1)
             # 更新本地数据
             sqlite_data.write(df, 'index_daily')
             print('index_dailybasic成功地从%s更新到%s' %(date, update_date))
