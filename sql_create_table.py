@@ -9,8 +9,8 @@ def create_table():
         ts_code varchar(32) PRIMARY KEY not null,
         symbol varchar(32) not null,
         name varchar(32) not null,
-        area varchar(32) not null,
-        industry varchar(32) not null,
+        area varchar(32),
+        industry varchar(32),
         fullname varchar(32) not null,
         enname varchar(32) not null,
         cnspell varchar(32) not null,
@@ -19,8 +19,8 @@ def create_table():
         curr_type varchar(32) not null,
         list_status varchar(32) not null,
         list_date varchar(32) not null,
-        delist_date varchar(32) not null,
-        is_hs varchar(32) not null);"""
+        delist_date varchar(32),
+        is_hs varchar(32));"""
     c.execute(sql)
 
     # 2.创建交易日历trade_cal

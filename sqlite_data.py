@@ -10,7 +10,7 @@ def write(dataframe, table_name):
     :return:
     """
     conn = sqlite3.connect('data.db')
-    dataframe.to_sql(table_name, conn, if_exists= 'append', index=False)
+    dataframe.to_sql(table_name, conn, if_exists='append', index=False)
     conn.close()
 
 def delete_table(table_name):
@@ -60,6 +60,7 @@ class DataApi:
 
 if __name__ == '__main__':
     pass
+    delete_table('stock_basic')
     ### 删除数据
     # from TushareApi import TushareApi
     # api = TushareApi()

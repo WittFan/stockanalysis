@@ -9,6 +9,7 @@ class TushareApi:
         self.ts_code_set = {'000001.SH': '上证指数', '000300.SH': '沪深300', '000905.SH': '中证500', '399001.SZ': '深证成指',
                         '399005.SZ': '中小100', '399006.SZ': '创业板指', '399016.SZ': '', '399300.SZ': '沪深300',
                         '000005.SH': '商业指数', '000006.SH': '地产指数', '000016.SH': '上证５０', '399905.SZ': '中证 500'}
+        self.pro = ts.pro_api()
 
     @staticmethod
     def get_daily_data(start_date, end_date, ts_code, day_num, tushare_pro_api):
@@ -41,10 +42,12 @@ class TushareApi:
         """将tushare数据写入本地csv"""
         dataframe.to_csv('./data/index_dailybasic.csv', index=False)
 
-    @staticmethod
-    def set_primary_key(dataframe):
-        dataframe['ts_code_trade_date'] = dataframe.apply(lambda x: x['ts_code']+str(x['trade_date']), axis=1)
-        return dataframe
+    def pull_stock_basic_all(self):
+        df = self.pro.stock_basic(fields='ts_code,symbol,name,area,industry,fullname,enname,cnspell,market,exchange,curr_type,list_status,list_date,delist_date,is_hs')
+        try:
+            sqlite_data.write(df, 'stock_basic')
+        except sqlite3.IntegrityError:
+            print('stock_basic已经存在或%s' %sqlite3.IntegrityError)
 
     def pull_index_dailybasic_all_data(self):
         # 拉取大盘指数每日指标index_dailybasic到本地，并存储
@@ -53,10 +56,8 @@ class TushareApi:
             start_date = datetime.date(2004, 1, 1) # 开始时间
             end_date = datetime.date.today() # 结束时间
             day_num = 12*360 # tushare的个数限制
-            pro = ts.pro_api()
-            tushare_pro_api = pro.index_dailybasic # 接口函数
-            df = self.get_daily_data(start_date, end_date, ts_code, day_num, tushare_pro_api)
-            df = self.set_primary_key(df)
+            df = self.get_daily_data(start_date, end_date, ts_code, day_num, self.pro.index_dailybasic)
+            df['ts_code_trade_date'] = df.apply(lambda x: x['ts_code'] + str(x['trade_date']), axis=1)
             try:
                 sqlite_data.write(df, 'index_dailybasic')
             except sqlite3.IntegrityError:
@@ -73,9 +74,8 @@ class TushareApi:
             start_date = datetime.date(1990, 1, 1) # 开始时间
             end_date = datetime.date.today() # 结束时间
             day_num = 7900 # tushare的个数限制
-            pro = ts.pro_api()
-            df = self.get_daily_data(start_date, end_date, ts_code, day_num, pro.index_daily)
-            df = self.set_primary_key(df)
+            df = self.get_daily_data(start_date, end_date, ts_code, day_num, self.pro.index_daily)
+            df['ts_code_trade_date'] = df.apply(lambda x: x['ts_code'] + str(x['trade_date']), axis=1)
             try:
                 sqlite_data.write(df, 'index_daily')
                 print('%s下载成功' % ts_code)
@@ -84,6 +84,7 @@ class TushareApi:
 
     def pull_all_data(self):
         # 所有全量数据拉取到本地，并存储
+        self.pull_stock_basic_all()
         self.pull_index_dailybasic_all_data()
         self.pull_index_daily_all_data()
 
@@ -126,7 +127,7 @@ class TushareApi:
         return date
 
 if __name__ == '__main__':
-    ts_code, start_date, end_date = '000001.SH', '2004011', '20230325'
-    index_daily_basic = TushareApi()
-    index_daily_basic.pull_index_daily_all_data()
+    # ts_code, start_date, end_date = '000001.SH', '2004011', '20230325'
+    tushare_api = TushareApi()
+    tushare_api.pull_stock_basic_all()
     #df = index_daily_basic.read_data(ts_code, start_date, end_date)
