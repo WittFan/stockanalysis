@@ -43,6 +43,7 @@ class TushareApi:
         dataframe.to_csv('./data/index_dailybasic.csv', index=False)
 
     def pull_stock_basic_all(self):
+        """1.股票列表stock_basic"""
         df = self.pro.stock_basic(fields='ts_code,symbol,name,area,industry,fullname,enname,cnspell,market,exchange,curr_type,list_status,list_date,delist_date,is_hs')
         try:
             sqlite_data.write(df, 'stock_basic')
@@ -50,6 +51,7 @@ class TushareApi:
             print('stock_basic已经存在或%s' %sqlite3.IntegrityError)
 
     def pull_trade_cal_all(self):
+        """2.交易日历trade_cal"""
         df = self.pro.trade_cal()
         df['exchange_cal_date'] = df.apply(lambda x: x['exchange'] + str(x['cal_date']), axis=1)
         try:
@@ -58,6 +60,7 @@ class TushareApi:
             print('trade_cal已经存在或%s' %sqlite3.IntegrityError)
 
     def pull_namechange_all(self):
+        """3.股票曾用名namechange"""
         df = self.pro.namechange()
         try:
             sqlite_data.write(df, 'namechange')
@@ -65,16 +68,52 @@ class TushareApi:
             print('namechange已经存在或%s' % sqlite3.IntegrityError)
 
     def pull_hs_const_all(self):
-        pass
+        """4.沪深股通成份股hs_const"""
+        df1 = self.pro.hs_const(hs_type='SH')
+        df2 = self.pro.hs_const(hs_type='SZ')
+        df = pd.concat([df1, df2], axis=0)
+        try:
+            sqlite_data.write(df, 'hs_const')
+        except sqlite3.IntegrityError:
+            print('hs_const已经存在或%s' % sqlite3.IntegrityError)
 
     def pull_stock_company_all(self):
-        pass
+        """5.上市公司基本信息stock_company"""
+        df1 = self.pro.stock_company(exchange='SSE',
+                                fields='ts_code, exchange, chairman, manager, secretary, reg_capital,setup_date,province, city, introduction, website, email, office, employees, main_business, business_scope')
+        df2 = self.pro.stock_company(exchange='SZSE',
+                                fields='ts_code, exchange, chairman, manager, secretary, reg_capital, setup_date,province, city, introduction, website, email, office, employees, main_business, business_scope')
+        df = pd.concat([df1, df2], axis=0)
+        try:
+            sqlite_data.write(df, 'stock_company')
+        except sqlite3.IntegrityError:
+            print('stock_company已经存在或%s' % sqlite3.IntegrityError)
 
     def pull_index_basic_all(self):
-        pass
+        """6.指数基本信息index_basic"""
+        df = self.pro.index_basic(fields=["ts_code", "name", "fullname", "market", "publisher", "index_type", "category",
+                                     "base_date", "base_point", "list_date", "weight_rule", "desc", "exp_date"])
+        try:
+            sqlite_data.write(df, 'index_basic')
+        except sqlite3.IntegrityError:
+            print('index_basic已经存在或%s' % sqlite3.IntegrityError)
 
     def pull_index_classify_all(self):
-        pass
+        """15.申万行业分类index_classify"""
+        # 获取申万一级行业列表
+        df1 = self.pro.index_classify(level='L1', src='SW2021',
+                                 fields='index_code, industry_name, level, industry_code, is_pub, parent_code, src')
+        # 获取申万二级行业列表
+        df2 = self.pro.index_classify(level='L2', src='SW2021',
+                                 fields='index_code, industry_name, level, industry_code, is_pub, parent_code, src')
+        # 获取申万三级级行业列表
+        df3 = self.pro.index_classify(level='L3', src='SW2021',
+                                 fields='index_code, industry_name, level, industry_code, is_pub, parent_code, src')
+        df = pd.concat([df1, df2, df3], axis=0)
+        try:
+            sqlite_data.write(df, 'index_classify')
+        except sqlite3.IntegrityError:
+            print('index_classify已经存在或%s' % sqlite3.IntegrityError)
 
     def pull_index_member_all(self):
         pass
@@ -125,7 +164,9 @@ class TushareApi:
         self.pull_namechange_all()
         self.pull_hs_const_all()
         self.pull_stock_company_all()
+        self.pull_index_basic_all()
         self.pull_index_classify_all()
+        
         self.pull_index_member_all()
         self.pull_fx_obasic_all()
 
@@ -178,6 +219,11 @@ class TushareApi:
 
 if __name__ == '__main__':
     # ts_code, start_date, end_date = '000001.SH', '2004011', '20230325'
+    # from sqlite_data import delete_table
+    # delete_table('index_classify')
+    # from sql_create_table import create_table
+    # create_table()
+
     tushare_api = TushareApi()
-    tushare_api.pull_namechange_all()
+    tushare_api.pull_index_classify_all()
     #df = index_daily_basic.read_data(ts_code, start_date, end_date)

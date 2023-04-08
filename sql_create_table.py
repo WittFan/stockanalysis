@@ -56,20 +56,20 @@ def create_table():
     sql = """create table if not exists stock_company(
         ts_code varchar(32) PRIMARY KEY not null,
         exchange varchar(32) not null,
-        chairman varchar(32) not null,
-        manager varchar(32) not null,
-        secretary varchar(32) not null,
+        chairman varchar(32),
+        manager varchar(32),
+        secretary varchar(32),
         reg_capital float not null,
         setup_date varchar(32) not null,
-        province varchar(32) not null,
-        city varchar(32) not null,
-        introduction varchar(32) not null,
-        website varchar(32) not null,
-        email varchar(32) not null,
-        office varchar(32) not null,
-        employees float not null,
-        main_business varchar(32) not null,
-        business_scope varchar(32) not null);"""
+        province varchar(32),
+        city varchar(32),
+        introduction varchar(32),
+        website varchar(32),
+        email varchar(32),
+        office varchar(32),
+        employees float,
+        main_business varchar(32),
+        business_scope varchar(32));"""
     c.execute(sql)
 
     # 6.管理层薪酬和持股stk_rewards

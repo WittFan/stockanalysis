@@ -37,6 +37,7 @@ def read(table_name, ts_code, start_date, end_date):
     """
     从sqlite数据库读index_dailybasic数据
     :return:
+    df = pro.index_dailybasic(trade_date='20181018', fields='ts_code,trade_date,turnover_rate,pe')
     """
     conn = sqlite3.connect('data.db')
     sql = """select * from %s where ts_code=='%s' and trade_date>='%s' and trade_date<='%s';""" %(table_name, ts_code, start_date, end_date)
@@ -60,7 +61,7 @@ class DataApi:
 
 if __name__ == '__main__':
     pass
-    delete_table('namechange')
+    delete_table('stock_company')
     ### 删除数据
     # from TushareApi import TushareApi
     # api = TushareApi()
