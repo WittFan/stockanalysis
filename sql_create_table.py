@@ -251,11 +251,11 @@ def create_table():
     sql = """create table if not exists index_member(
             index_code_con_code_in_date varchar(32) PRIMARY KEY not null,
             index_code varchar(32) not null,
-            index_name varchar(32) not null,
+            index_name varchar(32),
             con_code varchar(32) not null,
-            con_name varchar(32) not null,
+            con_name varchar(32),
             in_date varchar(32) not null,
-            out_date varchar(32) not null,
+            out_date varchar(32),
             is_new varchar(32) not null);"""
     c.execute(sql)
     # 16.外汇基础信息（海外）fx_obasic
@@ -265,13 +265,13 @@ def create_table():
             classify varchar(32) not null,
             exchange varchar(32) not null,
             min_unit float not null,
-            max_unit float not null,
-            pip float not null,
-            pip_cost float not null,
-            traget_spread float not null,
-            min_stop_distance float not null,
-            trading_hours varchar(32) not null,
-            break_time varchar(32) not null);"""
+            max_unit float,
+            pip float,
+            pip_cost float,
+            traget_spread float,
+            min_stop_distance float,
+            trading_hours varchar(32),
+            break_time varchar(32));"""
     c.execute(sql)
     # 17.外汇日线行情fx_daily
     sql = """create table if not exists fx_daily(

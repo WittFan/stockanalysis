@@ -3,6 +3,7 @@ import pandas as pd
 import datetime, time
 import sqlite3
 import sqlite_data
+from sqlite_data import DataApi
 
 class TushareApi:
     def __init__(self):
@@ -116,10 +117,30 @@ class TushareApi:
             print('index_classify已经存在或%s' % sqlite3.IntegrityError)
 
     def pull_index_member_all(self):
-        pass
+        data_api = DataApi()
+        index_codes = data_api.index_classify(fields=['index_code'])
+        df = self.pro.index_member(index_code=index_codes.values[0][0], fields=['index_code', 'index_name',
+                                                                           'con_code', 'con_name', 'in_date',
+                                                                           'out_date', 'is_new'])
+        for index_code in index_codes.values[1:]:
+            # 获取黄金分类的成份股
+            print(index_code[0])
+            while True:
+                try:
+                    df2 = self.pro.index_member(index_code=index_code[0])
+                    break
+                except:
+                    print('等待5秒')
+                    time.sleep(5)
+            df = pd.concat([df, df2], axis=0)
+        df = df.drop_duplicates()
+        df['index_code_con_code_in_date'] = df.apply(lambda x: x['index_code'] + x['con_code'] + str(x['in_date']),
+                                                     axis=1)
+        sqlite_data.write(df, 'index_member')
 
     def pull_fx_obasic_all(self):
-        pass
+        df = self.pro.fx_obasic()
+        sqlite_data.write(df, 'fx_obasic')
 
     def pull_index_dailybasic_all_data(self):
         # 拉取大盘指数每日指标index_dailybasic到本地，并存储
@@ -166,7 +187,6 @@ class TushareApi:
         self.pull_stock_company_all()
         self.pull_index_basic_all()
         self.pull_index_classify_all()
-        
         self.pull_index_member_all()
         self.pull_fx_obasic_all()
 
@@ -220,10 +240,10 @@ class TushareApi:
 if __name__ == '__main__':
     # ts_code, start_date, end_date = '000001.SH', '2004011', '20230325'
     # from sqlite_data import delete_table
-    # delete_table('index_classify')
+    # delete_table('fx_obasic')
     # from sql_create_table import create_table
     # create_table()
 
     tushare_api = TushareApi()
-    tushare_api.pull_index_classify_all()
+    tushare_api.pull_fx_obasic_all()
     #df = index_daily_basic.read_data(ts_code, start_date, end_date)
