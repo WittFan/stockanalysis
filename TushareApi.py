@@ -266,18 +266,18 @@ class TushareApi:
         tushare所有全量数据拉取到本地并存储，明细表部分
         :return:
         """
-        self.pull_stk_rewards_all_data()
-        self.pull_stk_holdertrade_all_data()
-        self.pull_daily_basic_all_data()
-        self.pull_stk_factor_all_data()
-        self.pull_weekly_all_data()
-        self.pull_monthly_all_data()
-        self.pull_index_dailybasic_all_data()
-        self.pull_index_daily_all_data()
+        self.pull_stk_rewards_all_data() #1
+        self.pull_stk_holdertrade_all_data() #2
+        self.pull_daily_basic_all_data() #3
+        self.pull_stk_factor_all_data() #4
+        self.pull_weekly_all_data() #5
+        self.pull_monthly_all_data() #6
+        self.pull_index_dailybasic_all_data() #7
+        self.pull_index_daily_all_data() #8
         self.pull_index_member_all() #完成
-        self.pull_fx_daily_all_data()
-        self.pull_stock_mx_all_data()
-        self.pull_stock_vx_all_data()
+        self.pull_fx_daily_all_data() #9
+        self.pull_stock_mx_all_data() #10
+        self.pull_stock_vx_all_data() #11
 
     def pull_new_data(self):
         ### 增量数据拉取到本地，并存储
