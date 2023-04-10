@@ -56,7 +56,7 @@ def query(table_name, **kwargs):
         sql_field = sql_field[:-1]
         query = f"SELECT {sql_field} FROM {table_name} WHERE "
     except:
-        query = f"SELECT * FROM {table_name} WHERE "
+        query = f"SELECT * FROM {table_name} WHERE"
     # 查询的字段
     for key, value in kwargs.items():
         if key == 'fields': # 因为前面对fields进行了处理
@@ -91,12 +91,12 @@ class DataApi:
 
 if __name__ == '__main__':
     pass
-    # delete_table('stock_company')
-    ### 删除数据
+    delete_table('trade_cal')
+    # 删除数据
 
     # from TushareApi import TushareApi
     # api = TushareApi()
     # for i in api.ts_code_set:
     #     delete_data('index_daily', i)
-    data_api = DataApi()
-    print(data_api.index_dailybasic(ts_code='000001.SH', start_date='20040108', end_date='20230322'))
+    # data_api = DataApi()
+    # print(data_api.index_dailybasic(ts_code='000001.SH', start_date='20040108', end_date='20230322'))

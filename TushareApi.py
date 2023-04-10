@@ -4,6 +4,7 @@ import datetime, time
 import sqlite3
 import sqlite_data
 from sqlite_data import DataApi
+from sqlite_data import delete_table
 
 class TushareApi:
     def __init__(self):
@@ -46,25 +47,38 @@ class TushareApi:
     def pull_stock_basic_all(self):
         """1.股票列表stock_basic"""
         df = self.pro.stock_basic(fields='ts_code,symbol,name,area,industry,fullname,enname,cnspell,market,exchange,curr_type,list_status,list_date,delist_date,is_hs')
+        delete_table('stock_basic')
+        print('删除stock_basic')
         try:
             sqlite_data.write(df, 'stock_basic')
+            print('stock_basic下载成功')
         except sqlite3.IntegrityError:
             print('stock_basic已经存在或%s' %sqlite3.IntegrityError)
 
     def pull_trade_cal_all(self):
         """2.交易日历trade_cal"""
-        df = self.pro.trade_cal()
+        # 交易所SSE上交所, SZSE深交所, CFFEX中金所, SHFE上期所, CZCE郑商所, DCE大商所, INE上能源
+        df = pd.DataFrame()
+        for i in ['SSE', 'SZSE', 'CFFEX', 'SHFE', 'CZCE', 'DCE', 'INE']:
+            df2 = self.pro.trade_cal(exchange=i)
+            df = pd.concat([df, df2], axis=0)
         df['exchange_cal_date'] = df.apply(lambda x: x['exchange'] + str(x['cal_date']), axis=1)
+        delete_table('trade_cal')
+        print('删除trade_cal')
         try:
             sqlite_data.write(df, 'trade_cal')
+            print('trade_cal下载成功')
         except sqlite3.IntegrityError:
             print('trade_cal已经存在或%s' %sqlite3.IntegrityError)
 
     def pull_namechange_all(self):
         """3.股票曾用名namechange"""
         df = self.pro.namechange()
+        delete_table('namechange')
+        print('删除namechange')
         try:
             sqlite_data.write(df, 'namechange')
+            print('namechange下载成功')
         except sqlite3.IntegrityError:
             print('namechange已经存在或%s' % sqlite3.IntegrityError)
 
@@ -73,8 +87,11 @@ class TushareApi:
         df1 = self.pro.hs_const(hs_type='SH')
         df2 = self.pro.hs_const(hs_type='SZ')
         df = pd.concat([df1, df2], axis=0)
+        delete_table('hs_const')
+        print('删除hs_const')
         try:
             sqlite_data.write(df, 'hs_const')
+            print('hs_const下载成功')
         except sqlite3.IntegrityError:
             print('hs_const已经存在或%s' % sqlite3.IntegrityError)
 
@@ -85,8 +102,11 @@ class TushareApi:
         df2 = self.pro.stock_company(exchange='SZSE',
                                 fields='ts_code, exchange, chairman, manager, secretary, reg_capital, setup_date,province, city, introduction, website, email, office, employees, main_business, business_scope')
         df = pd.concat([df1, df2], axis=0)
+        delete_table('stock_company')
+        print('删除stock_company')
         try:
             sqlite_data.write(df, 'stock_company')
+            print('stock_company下载成功')
         except sqlite3.IntegrityError:
             print('stock_company已经存在或%s' % sqlite3.IntegrityError)
 
@@ -94,8 +114,12 @@ class TushareApi:
         """6.指数基本信息index_basic"""
         df = self.pro.index_basic(fields=["ts_code", "name", "fullname", "market", "publisher", "index_type", "category",
                                      "base_date", "base_point", "list_date", "weight_rule", "desc", "exp_date"])
+        from sqlite_data import delete_table
+        delete_table('index_basic')
+        print('删除index_basic')
         try:
             sqlite_data.write(df, 'index_basic')
+            print('index_basic下载成功')
         except sqlite3.IntegrityError:
             print('index_basic已经存在或%s' % sqlite3.IntegrityError)
 
@@ -111,10 +135,82 @@ class TushareApi:
         df3 = self.pro.index_classify(level='L3', src='SW2021',
                                  fields='index_code, industry_name, level, industry_code, is_pub, parent_code, src')
         df = pd.concat([df1, df2, df3], axis=0)
+        delete_table('index_classify')
+        print('删除index_classify')
         try:
             sqlite_data.write(df, 'index_classify')
+            print('index_classify下载成功')
         except sqlite3.IntegrityError:
             print('index_classify已经存在或%s' % sqlite3.IntegrityError)
+
+
+    def pull_fx_obasic_all(self):
+        df = self.pro.fx_obasic()
+        delete_table('fx_obasic')
+        print('删除fx_obasic')
+        try:
+            sqlite_data.write(df, 'fx_obasic')
+            print('fx_obasic下载成功')
+        except sqlite3.IntegrityError:
+            print('fx_obasic已经存在或%s' % sqlite3.IntegrityError)
+
+
+    def pull_stk_rewards_all_data(self):
+        """管理层薪酬和持股"""
+        pass
+
+    def pull_stk_holdertrade_all_data(self):
+        """股东增减持"""
+        pass
+
+    def pull_daily_basic_all_data(self):
+        """每日指标"""
+        pass
+
+    def pull_stk_factor_all_data(self):
+        """股票技术因子（量化因子）"""
+        pass
+
+    def pull_weekly_all_data(self):
+        """周线行情"""
+        pass
+
+    def pull_monthly_all_data(self):
+        """月线行情"""
+        pass
+
+    def pull_index_daily_all_data(self):
+        """
+        拉取大盘指数每日指标index_daily到本地，并存储
+        指数范围：self.ts_code_set
+        :return:
+        """
+        for ts_code in self.ts_code_set:
+            # 遍历IndexDailybasic的所有代码ts_code
+            start_date = datetime.date(1990, 1, 1) # 开始时间
+            end_date = datetime.date.today() # 结束时间
+            day_num = 7900 # tushare的个数限制
+            df = self.get_daily_data(start_date, end_date, ts_code, day_num, self.pro.index_daily)
+            df['ts_code_trade_date'] = df.apply(lambda x: x['ts_code'] + str(x['trade_date']), axis=1)
+            try:
+                sqlite_data.write(df, 'index_daily')
+                print('%s下载成功' % ts_code)
+            except sqlite3.IntegrityError:
+                print('%s已经存在' %ts_code)
+
+    def pull_index_dailybasic_all_data(self):
+        # 拉取大盘指数每日指标index_dailybasic到本地，并存储
+        for ts_code in self.ts_code_set:
+            # 遍历IndexDailybasic的所有代码ts_code
+            start_date = datetime.date(2004, 1, 1) # 开始时间
+            end_date = datetime.date.today() # 结束时间
+            day_num = 12*360 # tushare的个数限制
+            df = self.get_daily_data(start_date, end_date, ts_code, day_num, self.pro.index_dailybasic)
+            df['ts_code_trade_date'] = df.apply(lambda x: x['ts_code'] + str(x['trade_date']), axis=1)
+            try:
+                sqlite_data.write(df, 'index_dailybasic')
+            except sqlite3.IntegrityError:
+                print('%s已经存在' %ts_code)
 
     def pull_index_member_all(self):
         data_api = DataApi()
@@ -136,44 +232,20 @@ class TushareApi:
         df = df.drop_duplicates()
         df['index_code_con_code_in_date'] = df.apply(lambda x: x['index_code'] + x['con_code'] + str(x['in_date']),
                                                      axis=1)
-        sqlite_data.write(df, 'index_member')
+        try:
+            sqlite_data.write(df, 'index_member')
+            print('index_member下载成功')
+        except sqlite3.IntegrityError:
+            print('index_member已经存在或%s' % sqlite3.IntegrityError)
 
-    def pull_fx_obasic_all(self):
-        df = self.pro.fx_obasic()
-        sqlite_data.write(df, 'fx_obasic')
+    def pull_fx_daily_all_data(self):
+        pass
 
-    def pull_index_dailybasic_all_data(self):
-        # 拉取大盘指数每日指标index_dailybasic到本地，并存储
-        for ts_code in self.ts_code_set:
-            # 遍历IndexDailybasic的所有代码ts_code
-            start_date = datetime.date(2004, 1, 1) # 开始时间
-            end_date = datetime.date.today() # 结束时间
-            day_num = 12*360 # tushare的个数限制
-            df = self.get_daily_data(start_date, end_date, ts_code, day_num, self.pro.index_dailybasic)
-            df['ts_code_trade_date'] = df.apply(lambda x: x['ts_code'] + str(x['trade_date']), axis=1)
-            try:
-                sqlite_data.write(df, 'index_dailybasic')
-            except sqlite3.IntegrityError:
-                print('%s已经存在' %ts_code)
+    def pull_stock_mx_all_data(self):
+        pass
 
-    def pull_index_daily_all_data(self):
-        """
-        拉取大盘指数每日指标index_daily到本地，并存储
-        指数范围：self.ts_code_set
-        :return:
-        """
-        for ts_code in self.ts_code_set:
-            # 遍历IndexDailybasic的所有代码ts_code
-            start_date = datetime.date(1990, 1, 1) # 开始时间
-            end_date = datetime.date.today() # 结束时间
-            day_num = 7900 # tushare的个数限制
-            df = self.get_daily_data(start_date, end_date, ts_code, day_num, self.pro.index_daily)
-            df['ts_code_trade_date'] = df.apply(lambda x: x['ts_code'] + str(x['trade_date']), axis=1)
-            try:
-                sqlite_data.write(df, 'index_daily')
-                print('%s下载成功' % ts_code)
-            except sqlite3.IntegrityError:
-                print('%s已经存在' %ts_code)
+    def pull_stock_vx_all_data(self):
+        pass
 
     def pull_all_data_basic(self):
         """
@@ -187,7 +259,6 @@ class TushareApi:
         self.pull_stock_company_all()
         self.pull_index_basic_all()
         self.pull_index_classify_all()
-        self.pull_index_member_all()
         self.pull_fx_obasic_all()
 
     def pull_all_data_detail(self):
@@ -195,9 +266,18 @@ class TushareApi:
         tushare所有全量数据拉取到本地并存储，明细表部分
         :return:
         """
-        self.pull_stock_basic_all()
+        self.pull_stk_rewards_all_data()
+        self.pull_stk_holdertrade_all_data()
+        self.pull_daily_basic_all_data()
+        self.pull_stk_factor_all_data()
+        self.pull_weekly_all_data()
+        self.pull_monthly_all_data()
         self.pull_index_dailybasic_all_data()
         self.pull_index_daily_all_data()
+        self.pull_index_member_all() #完成
+        self.pull_fx_daily_all_data()
+        self.pull_stock_mx_all_data()
+        self.pull_stock_vx_all_data()
 
     def pull_new_data(self):
         ### 增量数据拉取到本地，并存储
@@ -240,10 +320,9 @@ class TushareApi:
 if __name__ == '__main__':
     # ts_code, start_date, end_date = '000001.SH', '2004011', '20230325'
     # from sqlite_data import delete_table
-    # delete_table('fx_obasic')
+    # delete_table('namechange')
     # from sql_create_table import create_table
     # create_table()
 
     tushare_api = TushareApi()
-    tushare_api.pull_fx_obasic_all()
-    #df = index_daily_basic.read_data(ts_code, start_date, end_date)
+    tushare_api.pull_all_data_basic()
