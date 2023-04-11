@@ -163,9 +163,16 @@ class TushareApi:
         """股东增减持"""
         pass
 
-    def pull_daily_basic_all_data(self):
+    def pull_daily_basic_new_data(self):
         """每日指标"""
         pass
+        data_api = DataApi()
+        trade_cal = data_api.trade_cal(fields=['cal_date'])['cal_date'].unique()
+        print(trade_cal)
+        # 查询数据库，
+        # 计算需要更新的百分比
+        # 下载数据库最新日期到现在的数据
+        # 将下载的数据插入数据库
 
     def pull_stk_factor_all_data(self):
         """股票技术因子（量化因子）"""
@@ -325,4 +332,4 @@ if __name__ == '__main__':
     # create_table()
 
     tushare_api = TushareApi()
-    tushare_api.pull_all_data_basic()
+    tushare_api.pull_daily_basic_all_data()
