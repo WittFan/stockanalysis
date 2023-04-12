@@ -13,6 +13,7 @@ class TushareApi:
                         '000005.SH': '商业指数', '000006.SH': '地产指数', '000016.SH': '上证５０', '399905.SZ': '中证 500'}
         self.pro = ts.pro_api()
 
+
     @staticmethod
     def get_daily_data(start_date, end_date, ts_code, day_num, tushare_pro_api):
         """从tushare获取数据"""
@@ -165,11 +166,17 @@ class TushareApi:
 
     def pull_daily_basic_new_data(self):
         """每日指标"""
-        pass
         data_api = DataApi()
-        trade_cal = data_api.trade_cal(exchange='SSE', fields=['cal_date'])['cal_date'][::-1] # SSE开始于19901219 SZSE开始于19910703
-        print(trade_cal)
+        # SSE开始于19901219 SZSE开始于19910703，因此只需要SSE。返回的交易日历仅仅是从开始时间到今年最后一天，并未扣除节假日。
+        trade_cal = data_api.trade_cal(exchange='SSE', fields=['cal_date'])['cal_date'][::-1]
         # 查询数据库中更新到哪里
+        daily_basic = data_api.daily_basic()
+        if len(daily_basic) == 0:
+            start_date = '19901219'
+        else:
+            start_date = daily_basic['trade_date'][-1]
+        end_date = datetime.datetime.now().strftime("%Y%m%d")
+        print(start_date, end_date)
         # 计算需要更新的百分比
         # 下载数据库最新日期到现在的数据
         # 将下载的数据插入数据库
