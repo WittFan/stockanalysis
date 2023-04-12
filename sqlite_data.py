@@ -1,6 +1,7 @@
 import sqlite3
 import pandas as pd
 from functools import partial
+# 下一步：将data.db拆分到项目文件夹外面，将路径名称放到前面公用
 
 def write(dataframe, table_name):
     """

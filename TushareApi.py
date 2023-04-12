@@ -6,6 +6,8 @@ import sqlite_data
 from sqlite_data import DataApi
 from sqlite_data import delete_table
 
+# 下一步：continue pull_daily_stock_data, and abstract common into function.
+
 class TushareApi:
     def __init__(self):
         self.ts_code_set = {'000001.SH': '上证指数', '000300.SH': '沪深300', '000905.SH': '中证500', '399001.SZ': '深证成指',
