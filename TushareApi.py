@@ -173,6 +173,7 @@ class TushareApi:
         daily_basic = data_api.daily_basic(ts_code='update_date_record', fields=['trade_date'])
         if len(daily_basic) == 0:
             start_date = '19901219'
+            daily_basic_last_day = '19901218' #为了在下一个if判断有数值，该变量必须有数值
         else:
             daily_basic_last_day = daily_basic['trade_date'][daily_basic.index[-1]]
             print('上一次更新到', daily_basic_last_day)
