@@ -168,18 +168,44 @@ class TushareApi:
         """每日指标"""
         data_api = DataApi()
         # SSE开始于19901219 SZSE开始于19910703，因此只需要SSE。返回的交易日历仅仅是从开始时间到今年最后一天，并未扣除节假日。
-        trade_cal = data_api.trade_cal(exchange='SSE', fields=['cal_date'])['cal_date'][::-1]
-        # 查询数据库中更新到哪里
+        trade_cal = list(data_api.trade_cal(exchange='SSE', fields=['cal_date'])['cal_date'][::-1])
+        # 查询数据库中daily_basic最后一个日期，赋值开始日期、结束日期
         daily_basic = data_api.daily_basic()
         if len(daily_basic) == 0:
             start_date = '19901219'
         else:
-            start_date = daily_basic['trade_date'][-1]
+            daily_basic_last_day = daily_basic['trade_date'][daily_basic.index[-1]]
+            print('上一次更新到', daily_basic_last_day)
+            start_date = trade_cal[trade_cal.index(daily_basic_last_day)+1] # 在数据库的最后一个日期再往后移动一天
         end_date = datetime.datetime.now().strftime("%Y%m%d")
-        print(start_date, end_date)
         # 计算需要更新的百分比
-        # 下载数据库最新日期到现在的数据
-        # 将下载的数据插入数据库
+        update_percent = round(trade_cal.index(start_date) / trade_cal.index(end_date) * 100, 2)
+        print(f'股票每日指标daily_basic已更新： {update_percent}%，', '下一步', start_date, end_date)
+        ########## 下载数据（从数据库最后日期到今天的） #############
+        # 准备下载日期区间[start_date, end_date]
+        trade_date_list = trade_cal[trade_cal.index(start_date):trade_cal.index(end_date)]
+        # print(trade_date_list)
+        for date in trade_date_list:
+            while True:
+                try:
+                    df = self.pro.daily_basic(trade_date=date)
+                    print(f'下载{date}数据成功，数据长度{len(df)}')
+                    break
+                except:
+                    print(f'在下载股票每日指标daily_basic{date}时等待5秒')
+                    time.sleep(5)
+            # 判断date日期下是否有数据，有数据则添加primary key，无数据则进入下一天
+            if len(df) == 0:
+                print(date, '无数据')
+                continue
+            else:
+                df['ts_code_trade_date'] = df.apply(lambda x: x['ts_code'] + str(x['trade_date']), axis=1)
+            # 将下载的数据插入数据库
+            try:
+                sqlite_data.write(df, 'daily_basic')
+            except sqlite3.IntegrityError:
+                print('daily_basic已经存在或%s' % sqlite3.IntegrityError)
+        print('daily_basic下载成功')
 
     def pull_stk_factor_all_data(self):
         """股票技术因子（量化因子）"""
@@ -332,9 +358,8 @@ class TushareApi:
         return date
 
 if __name__ == '__main__':
-    # ts_code, start_date, end_date = '000001.SH', '2004011', '20230325'
     # from sqlite_data import delete_table
-    # delete_table('namechange')
+    # delete_table('daily_basic')
     # from sql_create_table import create_table
     # create_table()
 

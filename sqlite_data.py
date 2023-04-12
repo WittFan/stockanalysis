@@ -56,7 +56,7 @@ def query(table_name, **kwargs):
         sql_field = sql_field[:-1]
         query = f"SELECT {sql_field} FROM {table_name} WHERE "
     except:
-        query = f"SELECT * FROM {table_name} WHERE"
+        query = f"SELECT * FROM {table_name} WHERE "
     # 查询的字段
     for key, value in kwargs.items():
         if key == 'fields': # 因为前面对fields进行了处理
@@ -66,7 +66,7 @@ def query(table_name, **kwargs):
         elif key == 'end_date':
             query += f"trade_date <= '{value}' AND "
         else:
-            query += f"{key} == '{value}' AND "
+            query += f"{key}=='{value}' AND "
     query = query[:-5]+';'  # 去掉最后一个的' AND '
     conn = sqlite3.connect('data.db')  # 连接数据库
     df = pd.read_sql_query(query, conn)
