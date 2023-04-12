@@ -169,6 +169,7 @@ class TushareApi:
         data_api = DataApi()
         trade_cal = data_api.trade_cal(exchange='SSE', fields=['cal_date'])['cal_date'][::-1] # SSE开始于19901219 SZSE开始于19910703
         print(trade_cal)
+
         # 查询数据库中更新到哪里
         # 计算需要更新的百分比
         # 下载数据库最新日期到现在的数据
