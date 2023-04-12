@@ -167,9 +167,9 @@ class TushareApi:
         """每日指标"""
         pass
         data_api = DataApi()
-        trade_cal = data_api.trade_cal(fields=['cal_date'])['cal_date'].unique()
+        trade_cal = data_api.trade_cal(exchange='SSE', fields=['cal_date'])['cal_date'][::-1] # SSE开始于19901219 SZSE开始于19910703
         print(trade_cal)
-        # 查询数据库，
+        # 查询数据库中更新到哪里
         # 计算需要更新的百分比
         # 下载数据库最新日期到现在的数据
         # 将下载的数据插入数据库
@@ -275,7 +275,7 @@ class TushareApi:
         """
         self.pull_stk_rewards_all_data() #1
         self.pull_stk_holdertrade_all_data() #2
-        self.pull_daily_basic_all_data() #3
+        self.pull_daily_basic_new_data() #3
         self.pull_stk_factor_all_data() #4
         self.pull_weekly_all_data() #5
         self.pull_monthly_all_data() #6
@@ -332,4 +332,4 @@ if __name__ == '__main__':
     # create_table()
 
     tushare_api = TushareApi()
-    tushare_api.pull_daily_basic_all_data()
+    tushare_api.pull_daily_basic_new_data()

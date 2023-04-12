@@ -91,7 +91,7 @@ class DataApi:
 
 if __name__ == '__main__':
     pass
-    delete_table('trade_cal')
+    # delete_table('trade_cal')
     # 删除数据
 
     # from TushareApi import TushareApi
