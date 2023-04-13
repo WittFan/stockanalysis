@@ -175,7 +175,7 @@ class TushareApi:
         daily_basic = data_api.daily_basic(ts_code='update_date_record', fields=['trade_date'])
         if len(daily_basic) == 0:
             start_date = '19901219'
-            daily_basic_last_day = '19901218' #为了在下一个if判断有数值，该变量必须有数值
+            daily_basic_last_day = '19901219' #为了在下一个if判断有数值，该变量必须有数值
         else:
             daily_basic_last_day = daily_basic['trade_date'][daily_basic.index[-1]]
             print('上一次更新到', daily_basic_last_day)
@@ -325,7 +325,7 @@ class TushareApi:
         """
         self.pull_stk_rewards_all_data() #1
         self.pull_stk_holdertrade_all_data() #2
-        self.pull_daily_basic_new_data() #3
+        self.pull_daily_basic_new_data() #3 完成
         self.pull_stk_factor_all_data() #4
         self.pull_weekly_all_data() #5
         self.pull_monthly_all_data() #6
@@ -381,4 +381,5 @@ if __name__ == '__main__':
     # create_table()
 
     tushare_api = TushareApi()
+    # tushare_api.pull_all_data_basic()
     tushare_api.pull_daily_basic_new_data()
