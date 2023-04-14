@@ -224,9 +224,63 @@ class TushareApi:
             except sqlite3.IntegrityError:
                 print('daily_basic已经存在或%s' % sqlite3.IntegrityError)
 
-    def pull_stk_factor_all_data(self):
+    def pull_stk_factor_new_data(self):
         """股票技术因子（量化因子）"""
-        pass
+        data_api = DataApi()
+        # SSE开始于19901219 SZSE开始于19910703，因此只需要SSE。返回的交易日历仅仅是从开始时间到今年最后一天，并未扣除节假日。
+        trade_cal = list(data_api.trade_cal(exchange='SSE', fields=['cal_date'])['cal_date'][::-1])
+        # 从数据库update_date_record中查询更新daily_basic最后一个日期，再赋值下载的开始日期、结束日期
+        stk_factor = data_api.stk_factor(ts_code='update_date_record', fields=['trade_date'])
+        if len(stk_factor) == 0:
+            start_date = '19901219'
+            daily_basic_last_day = '19901219' #为了在下一个if判断有数值，该变量必须有数值
+        else:
+            daily_basic_last_day = stk_factor['trade_date'][stk_factor.index[-1]]
+            print('上一次更新到', daily_basic_last_day)
+            start_date = trade_cal[trade_cal.index(daily_basic_last_day)+1] # 在数据库的最后一个日期再往后移动一天
+        end_date = datetime.datetime.now().strftime("%Y%m%d")
+        if daily_basic_last_day == end_date:
+            print(f'daily_basic已更新到今日{end_date}')
+            return
+        # 计算需要更新的百分比
+        update_percent = round(trade_cal.index(daily_basic_last_day) / trade_cal.index(end_date) * 100, 2)
+        print(f'股票每日指标daily_basic已更新： {update_percent}%，', '下一步', start_date, end_date)
+        ########## 下载数据（从数据库最后日期到今天的） #############
+        # 准备下载日期区间[start_date, end_date]
+        if start_date == end_date:
+            trade_date_list = [start_date]
+        else:
+            trade_date_list = trade_cal[trade_cal.index(start_date):trade_cal.index(end_date)]
+        for date in trade_date_list:
+            while True:
+                try:
+                    df = self.pro.daily_basic(trade_date=date)
+                    print(f'表daily_basic，日期{date}，下载数据成功，数据长度{len(df)}')
+                    break
+                except:
+                    print(f'在下载股票每日指标daily_basic{date}时等待5秒')
+                    time.sleep(5)
+            # 判断date日期下是否有数据，有数据则添加primary key，无数据则进入下一天
+            if len(df) == 0:
+                continue
+                # 今日无数据会显示
+                ##>> 股票每日指标daily_basic已更新： 99.99 %， 下一步 20230413 20230413
+                ##>> 表daily_basic，日期20230413，下载数据成功，数据长度0
+            else:
+                # 添加primary key
+                df['ts_code_trade_date'] = df.apply(lambda x: x['ts_code'] + str(x['trade_date']), axis=1)
+                # 标记已更新日期到ts_code = update_date_record 数据上
+                df2 = pd.DataFrame({'trade_date': [date]})
+                df2['ts_code'] = 'update_date_record'
+                df2['close'] = 0
+                df2['ts_code_trade_date'] = df2.apply(lambda x: x['ts_code'] + str(x['trade_date']), axis=1)
+                df = pd.concat([df, df2], axis=0)
+            # 将下载的数据插入数据库
+            try:
+                sqlite_data.write(df, 'daily_basic')
+                print(f'表daily_basic，日期{date}，入库数据成功，数据长度{len(df)}')
+            except sqlite3.IntegrityError:
+                print('daily_basic已经存在或%s' % sqlite3.IntegrityError)
 
     def pull_weekly_all_data(self):
         """周线行情"""
