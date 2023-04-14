@@ -179,7 +179,7 @@ class TushareApi:
         else:
             daily_basic_last_day = daily_basic['trade_date'][daily_basic.index[-1]]
             print('上一次更新到', daily_basic_last_day)
-            start_date = trade_cal[trade_cal.index(daily_basic_last_day)+1] # 在数据库的最后一个日期再往后移动一天
+            start_date = trade_cal[trade_cal.index(daily_basic_last_day)+1]  # 在数据库的最后一个日期再往后移动一天
         end_date = datetime.datetime.now().strftime("%Y%m%d")
         if daily_basic_last_day == end_date:
             print(f'daily_basic已更新到今日{end_date}')
@@ -224,27 +224,28 @@ class TushareApi:
             except sqlite3.IntegrityError:
                 print('daily_basic已经存在或%s' % sqlite3.IntegrityError)
 
-    def pull_stk_factor_new_data(self):
-        """股票技术因子（量化因子）"""
+    def pull_stock_new_data(self, table_name):
         data_api = DataApi()
         # SSE开始于19901219 SZSE开始于19910703，因此只需要SSE。返回的交易日历仅仅是从开始时间到今年最后一天，并未扣除节假日。
         trade_cal = list(data_api.trade_cal(exchange='SSE', fields=['cal_date'])['cal_date'][::-1])
         # 从数据库update_date_record中查询更新daily_basic最后一个日期，再赋值下载的开始日期、结束日期
-        stk_factor = data_api.stk_factor(ts_code='update_date_record', fields=['trade_date'])
-        if len(stk_factor) == 0:
+        ###
+        updated_trade_date = data_api.query(table_name, ts_code='update_date_record', fields=['trade_date'])
+        if len(updated_trade_date) == 0:
             start_date = '19901219'
-            daily_basic_last_day = '19901219' #为了在下一个if判断有数值，该变量必须有数值
+            last_day = '19901219' #为了在下一个if判断有数值，该变量必须有数值
         else:
-            daily_basic_last_day = stk_factor['trade_date'][stk_factor.index[-1]]
-            print('上一次更新到', daily_basic_last_day)
-            start_date = trade_cal[trade_cal.index(daily_basic_last_day)+1] # 在数据库的最后一个日期再往后移动一天
+            last_day = updated_trade_date['trade_date'][updated_trade_date.index[-1]]
+            print('上一次更新到', last_day)
+            start_date = trade_cal[trade_cal.index(last_day)+1]  # 在数据库的最后一个日期再往后移动一天
         end_date = datetime.datetime.now().strftime("%Y%m%d")
-        if daily_basic_last_day == end_date:
-            print(f'daily_basic已更新到今日{end_date}')
+        if last_day == end_date:
+            print(f'{table_name}已更新到今日{end_date}')
             return
         # 计算需要更新的百分比
-        update_percent = round(trade_cal.index(daily_basic_last_day) / trade_cal.index(end_date) * 100, 2)
-        print(f'股票每日指标daily_basic已更新： {update_percent}%，', '下一步', start_date, end_date)
+        update_percent = round(trade_cal.index(last_day) / trade_cal.index(end_date) * 100, 2)
+        print(f'表{table_name}已更新： {update_percent}%，', '下一步', start_date, end_date)
+
         ########## 下载数据（从数据库最后日期到今天的） #############
         # 准备下载日期区间[start_date, end_date]
         if start_date == end_date:
@@ -252,13 +253,14 @@ class TushareApi:
         else:
             trade_date_list = trade_cal[trade_cal.index(start_date):trade_cal.index(end_date)]
         for date in trade_date_list:
+            # 如果接口有限制则等待5秒，直到可以继续调用
             while True:
                 try:
-                    df = self.pro.daily_basic(trade_date=date)
-                    print(f'表daily_basic，日期{date}，下载数据成功，数据长度{len(df)}')
+                    df = self.pro.query(table_name,trade_date=date)
+                    print(f'表{table_name}，日期{date}，下载数据成功，数据长度{len(df)}')
                     break
                 except:
-                    print(f'在下载股票每日指标daily_basic{date}时等待5秒')
+                    print(f'在下载表{table_name}{date}时等待5秒')
                     time.sleep(5)
             # 判断date日期下是否有数据，有数据则添加primary key，无数据则进入下一天
             if len(df) == 0:
@@ -272,15 +274,24 @@ class TushareApi:
                 # 标记已更新日期到ts_code = update_date_record 数据上
                 df2 = pd.DataFrame({'trade_date': [date]})
                 df2['ts_code'] = 'update_date_record'
-                df2['close'] = 0
                 df2['ts_code_trade_date'] = df2.apply(lambda x: x['ts_code'] + str(x['trade_date']), axis=1)
                 df = pd.concat([df, df2], axis=0)
             # 将下载的数据插入数据库
             try:
-                sqlite_data.write(df, 'daily_basic')
-                print(f'表daily_basic，日期{date}，入库数据成功，数据长度{len(df)}')
+                sqlite_data.write(df, table_name)
+                print(f'表{table_name}，日期{date}，入库数据成功，数据长度{len(df)}')
             except sqlite3.IntegrityError:
-                print('daily_basic已经存在或%s' % sqlite3.IntegrityError)
+                print('表{table_name}已经存在或%s' % sqlite3.IntegrityError)
+
+    def pull_stk_factor_new_data(self):
+        """股票技术因子（量化因子）"""
+        table_name = 'stk_factor'
+        self.pull_stock_new_data(table_name)
+
+    def pull_daily_new_data(self):
+        """股票技术因子（量化因子）"""
+        table_name = 'daily'
+        self.pull_stock_new_data(table_name)
 
     def pull_weekly_all_data(self):
         """周线行情"""
@@ -380,7 +391,8 @@ class TushareApi:
         self.pull_stk_rewards_all_data() #1
         self.pull_stk_holdertrade_all_data() #2
         self.pull_daily_basic_new_data() #3 完成
-        self.pull_stk_factor_all_data() #4
+        self.pull_stk_factor_new_data() #4
+        self.pull_daily_new_data() # 11
         self.pull_weekly_all_data() #5
         self.pull_monthly_all_data() #6
         self.pull_index_dailybasic_all_data() #7
@@ -388,7 +400,7 @@ class TushareApi:
         self.pull_index_member_all() #完成
         self.pull_fx_daily_all_data() #9
         self.pull_stock_mx_all_data() #10
-        self.pull_stock_vx_all_data() #11
+        self.pull_stock_vx_all_data() #12
 
     def pull_new_data(self):
         ### 增量数据拉取到本地，并存储
@@ -430,10 +442,10 @@ class TushareApi:
 
 if __name__ == '__main__':
     # from sqlite_data import delete_table
-    # delete_table('daily_basic')
+    # delete_table('stk_factor')
     # from sql_create_table import create_table
     # create_table()
 
     tushare_api = TushareApi()
     # tushare_api.pull_all_data_basic()
-    tushare_api.pull_daily_basic_new_data()
+    tushare_api.pull_daily_new_data()

@@ -127,41 +127,58 @@ def create_table():
         ts_code_trade_date varchar(32) PRIMARY KEY not null,
         ts_code varchar(32) not null,
         trade_date varchar(32) not null,
-        close float not null,
-        open float not null,
-        high float not null,
-        low float not null,
-        pre_close not null,
-        change float not null,
-        pct_change float not null,
-        vol float not null,
-        amount float not null,
-        adj_factor float not null,
-        open_hfq float not null,
-        open_qfq float not null,
-        close_hfq float not null,
-        close_qfq float not null,
-        high_hfq float not null,
-        high_qfq float not null,
-        low_hfq float not null,
-        low_qfq float not null,
-        pre_close_hfq float not null,
-        pre_close_qfq float not null,
-        macd_dif float not null,
-        macd_dea float not null,
-        macd float not null,
-        kdj_k float not null,
-        kdj_d float not null,
-        kdj_j float not null,
-        rsi_6 float not null,
-        rsi_12 float not null,
-        rsi_24 float not null,
-        boll_upper float not null,
-        boll_mid float not null,
-        boll_lower float not null,
-        cci float not null);"""
+        close float,
+        open float,
+        high float,
+        low float,
+        pre_close float,
+        change float,
+        pct_change float,
+        vol float,
+        amount float,
+        adj_factor float,
+        open_hfq float,
+        open_qfq float,
+        close_hfq float,
+        close_qfq float,
+        high_hfq float,
+        high_qfq float,
+        low_hfq float,
+        low_qfq float,
+        pre_close_hfq float,
+        pre_close_qfq float,
+        macd_dif float,
+        macd_dea float,
+        macd float,
+        kdj_k float,
+        kdj_d float,
+        kdj_j float,
+        rsi_6 float,
+        rsi_12 float,
+        rsi_24 float,
+        boll_upper float,
+        boll_mid float,
+        boll_lower float,
+        cci float);"""
     c.execute(sql)
-    # 10.周线行情weekly
+
+    # 11.A股日线行情 daily
+    sql = """create table if not exists daily(
+         ts_code_trade_date varchar(32) PRIMARY KEY not null,
+         ts_code varchar(32) not null,
+         trade_date varchar(32) not null,
+         close float,
+         open float,
+         high float,
+         low float,
+         pre_close float,
+         change float,
+         pct_chg float,
+         vol float,
+         amount float);"""
+    c.execute(sql)
+
+    # 12.周线行情weekly
     sql = """create table if not exists weekly(
             ts_code_trade_date varchar(32) PRIMARY KEY not null,
             ts_code varchar(32) not null,
@@ -176,7 +193,8 @@ def create_table():
             vol float not null,
             amount float not null);"""
     c.execute(sql)
-    # 11.月线行情monthly
+
+    # 13.月线行情monthly
     sql = """create table if not exists monthly(
             ts_code_trade_date varchar(32) PRIMARY KEY not null,
             ts_code varchar(32) not null,
@@ -191,7 +209,7 @@ def create_table():
             vol float not null,
             amount float not null);"""
     c.execute(sql)
-    # 12.指数日线行情index_daily表
+    # 14.指数日线行情index_daily表
     sql = """create table if not exists index_daily(
         ts_code_trade_date varchar(32) PRIMARY KEY not null,
         ts_code varchar(32) not null,
@@ -218,7 +236,7 @@ def create_table():
     # vol	float	成交量（手）
     # amount	float	成交额（千元）
     c.execute(sql)
-    # 13.大盘指数每日指标index_dailybasic表
+    # 15.大盘指数每日指标index_dailybasic表
     sql = """create table if not exists index_dailybasic(
         ts_code_trade_date varchar(32) PRIMARY KEY not null,
         ts_code varchar(32) not null,
@@ -237,7 +255,7 @@ def create_table():
     # '当日流通市值（元）'   '当日总股本（股）' '当日流通股本（股）' '当日自由流通股本（股）'
     # '换手率' '换手率（基于自由流通股本）' '市盈率' '市盈率TTM' '市净率'
     c.execute(sql)
-    # 14.申万行业分类index_classify
+    # 16.申万行业分类index_classify
     sql = """create table if not exists index_classify(
             industry_code varchar(32) PRIMARY KEY not null,
             index_code varchar(32) not null,
@@ -247,7 +265,7 @@ def create_table():
             is_pub varchar(32) not null,
             src float not null);"""
     c.execute(sql)
-    # 15.申万行业分类index_member
+    # 17.申万行业分类index_member
     sql = """create table if not exists index_member(
             index_code_con_code_in_date varchar(32) PRIMARY KEY not null,
             index_code varchar(32) not null,
@@ -258,7 +276,7 @@ def create_table():
             out_date varchar(32),
             is_new varchar(32) not null);"""
     c.execute(sql)
-    # 16.外汇基础信息（海外）fx_obasic
+    # 18.外汇基础信息（海外）fx_obasic
     sql = """create table if not exists fx_obasic(
             ts_code varchar(32) PRIMARY KEY not null,
             name varchar(32) not null,
@@ -273,7 +291,7 @@ def create_table():
             trading_hours varchar(32),
             break_time varchar(32));"""
     c.execute(sql)
-    # 17.外汇日线行情fx_daily
+    # 19.外汇日线行情fx_daily
     sql = """create table if not exists fx_daily(
             index_code_con_code_in_date varchar(32) PRIMARY KEY not null,
             index_code varchar(32) not null,
@@ -284,7 +302,7 @@ def create_table():
             out_date varchar(32) not null,
             is_new varchar(32) not null);"""
     c.execute(sql)
-    # 18.动能因子stock_mx
+    # 20.动能因子stock_mx
     sql = """create table if not exists stock_mx(
              ts_code_trade_date varchar(32) PRIMARY KEY not null,
              ts_code varchar(32) not null,
@@ -295,7 +313,7 @@ def create_table():
              zt_sum_z varchar(32) not null,
              wma250_z varchar(32) not null);"""
     c.execute(sql)
-    # 19.估值因子stock_vx
+    # 21.估值因子stock_vx
     sql = """create table if not exists stock_vx(
              ts_code_trade_date varchar(32) PRIMARY KEY not null,
              ts_code varchar(32) not null,

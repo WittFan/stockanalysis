@@ -46,33 +46,7 @@ def read(table_name, ts_code, start_date, end_date):
     conn.close()
     return df
 
-def query(table_name, **kwargs):
-    # 构造 SQL 查询语句
-    # 输出的字段
-    try:
-        fields = kwargs['fields']
-        sql_field =''
-        for i in fields:
-            sql_field += f'{i},'
-        sql_field = sql_field[:-1]
-        query = f"SELECT {sql_field} FROM {table_name} WHERE "
-    except:
-        query = f"SELECT * FROM {table_name} WHERE "
-    # 查询的字段
-    for key, value in kwargs.items():
-        if key == 'fields': # 因为前面对fields进行了处理
-            continue
-        elif key == 'start_date':
-            query += f"trade_date >= '{value}' AND "
-        elif key == 'end_date':
-            query += f"trade_date <= '{value}' AND "
-        else:
-            query += f"{key}=='{value}' AND "
-    query = query[:-5]+';'  # 去掉最后一个的' AND '
-    conn = sqlite3.connect('data.db')  # 连接数据库
-    df = pd.read_sql_query(query, conn)
-    conn.close()
-    return df
+
 
 
 class DataApi:
@@ -88,7 +62,35 @@ class DataApi:
         :param name:
         :return:
         """
-        return partial(query, table_name)
+        return partial(self.query, table_name)
+
+    def query(self, table_name, **kwargs):
+        # 构造 SQL 查询语句
+        # 输出的字段
+        try:
+            fields = kwargs['fields']
+            sql_field = ''
+            for i in fields:
+                sql_field += f'{i},'
+            sql_field = sql_field[:-1]
+            query = f"SELECT {sql_field} FROM {table_name} WHERE "
+        except:
+            query = f"SELECT * FROM {table_name} WHERE "
+        # 查询的字段
+        for key, value in kwargs.items():
+            if key == 'fields':  # 因为前面对fields进行了处理
+                continue
+            elif key == 'start_date':
+                query += f"trade_date >= '{value}' AND "
+            elif key == 'end_date':
+                query += f"trade_date <= '{value}' AND "
+            else:
+                query += f"{key}=='{value}' AND "
+        query = query[:-5] + ';'  # 去掉最后一个的' AND '
+        conn = sqlite3.connect('data.db')  # 连接数据库
+        df = pd.read_sql_query(query, conn)
+        conn.close()
+        return df
 
 if __name__ == '__main__':
     pass
