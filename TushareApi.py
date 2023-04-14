@@ -392,7 +392,7 @@ class TushareApi:
         self.pull_stk_holdertrade_all_data() #2
         self.pull_daily_basic_new_data() #3 完成
         self.pull_stk_factor_new_data() #4
-        self.pull_daily_new_data() # 11
+        self.pull_daily_new_data() # 完成
         self.pull_weekly_all_data() #5
         self.pull_monthly_all_data() #6
         self.pull_index_dailybasic_all_data() #7
