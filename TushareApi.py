@@ -172,11 +172,6 @@ class TushareApi:
         df = df.reset_index(drop=True)
         return df
 
-    @staticmethod
-    def write_data_csv(dataframe):
-        """将tushare数据写入本地csv"""
-        dataframe.to_csv('./data/index_dailybasic.csv', index=False)
-
     def pull_stock_basic_all(self):
         """1.股票列表stock_basic"""
         df = self.pro.stock_basic(fields='ts_code,symbol,name,area,industry,fullname,enname,cnspell,market,exchange,curr_type,list_status,list_date,delist_date,is_hs')
@@ -521,7 +516,7 @@ def pull_all_data_detail(self):
     tushare所有全量数据拉取到本地并存储，明细表部分
     :return:
     """
-    # self.pull_stk_rewards_all_data()  # 1 按照股票遍历，再按照日期遍历
+    # self.pull_stk_rewards_all_data()  # 1 按照股票遍历，再按照日期遍历 报告期才有数据
     # self.pull_stk_factor_new_data()  # 4
     # self.pull_index_dailybasic_all_data()  # 8
     # self.pull_index_daily_all_data()  # 9
@@ -542,7 +537,6 @@ if __name__ == '__main__':
     # delete_table('stk_holdertrade')
     # from sql_create_table import create_table
     # create_table()
-
     # tushare_api = TushareApi()
     # tushare_api.pull_fx_daily_new_data()
 

@@ -3,6 +3,8 @@ import pandas as pd
 from functools import partial
 # 下一步：将data.db拆分到项目文件夹外面，将路径名称放到前面公用
 
+database_location = 'data/data.db'
+
 def write(dataframe, table_name):
     """
     将数据写入本地sqlite
@@ -10,13 +12,13 @@ def write(dataframe, table_name):
     :param table_name:
     :return:
     """
-    conn = sqlite3.connect('data.db')
+    conn = sqlite3.connect(database_location)
     dataframe.to_sql(table_name, conn, if_exists='append', index=False)
     conn.close()
 
 def delete_table(table_name):
     """创建表"""
-    conn = sqlite3.connect('data.db')
+    conn = sqlite3.connect(database_location)
     c = conn.cursor()
     "创建表index_dailybasic表"
     sql = """drop table %s""" %table_name
@@ -26,7 +28,7 @@ def delete_table(table_name):
 
 def delete_data(table_name, ts_code):
     """创建表"""
-    conn = sqlite3.connect('data.db')
+    conn = sqlite3.connect(database_location)
     c = conn.cursor()
     "创建表index_dailybasic表"
     sql = """delete from %s where ts_code=='%s'""" %(table_name, ts_code)
@@ -40,7 +42,7 @@ def read(table_name, ts_code, start_date, end_date):
     :return:
     df = pro.index_dailybasic(trade_date='20181018', fields='ts_code,trade_date,turnover_rate,pe')
     """
-    conn = sqlite3.connect('data.db')
+    conn = sqlite3.connect(database_location)
     sql = """select * from %s where ts_code=='%s' and trade_date>='%s' and trade_date<='%s';""" %(table_name, ts_code, start_date, end_date)
     df = pd.read_sql_query(sql, conn)
     conn.close()
@@ -51,7 +53,7 @@ def read(table_name, ts_code, start_date, end_date):
 
 class DataApi:
     def __init__(self):
-        self.database = 'data.db'
+        self.database = database_location
 
     def __getattr__(self, table_name):
         """
