@@ -186,15 +186,15 @@ def create_table():
             ts_code_trade_date varchar(32) PRIMARY KEY not null,
             ts_code varchar(32) not null,
             trade_date varchar(32) not null,
-            close float not null,
-            open float not null,
-            high float not null,
-            low float not null,
-            pre_close float not null,
-            change float not null,
-            pct_chg float not null,
-            vol float not null,
-            amount float not null);"""
+            close float,
+            open float,
+            high float,
+            low float,
+            pre_close float,
+            change float,
+            pct_chg float,
+            vol float,
+            amount float);"""
     c.execute(sql)
 
     # 13.月线行情monthly
@@ -202,15 +202,15 @@ def create_table():
             ts_code_trade_date varchar(32) PRIMARY KEY not null,
             ts_code varchar(32) not null,
             trade_date varchar(32) not null,
-            close float not null,
-            open float not null,
-            high float not null,
-            low float not null,
-            pre_close float not null,
-            change float not null,
-            pct_chg float not null,
-            vol float not null,
-            amount float not null);"""
+            close float,
+            open float,
+            high float,
+            low float,
+            pre_close float,
+            change float,
+            pct_chg float,
+            vol float,
+            amount float);"""
     c.execute(sql)
     # 14.指数日线行情index_daily表
     sql = """create table if not exists index_daily(
@@ -296,46 +296,51 @@ def create_table():
     c.execute(sql)
     # 19.外汇日线行情fx_daily
     sql = """create table if not exists fx_daily(
-            index_code_con_code_in_date varchar(32) PRIMARY KEY not null,
-            index_code varchar(32) not null,
-            index_name varchar(32) not null,
-            con_code varchar(32) not null,
-            con_name varchar(32) not null,
-            in_date varchar(32) not null,
-            out_date varchar(32) not null,
-            is_new varchar(32) not null);"""
+            ts_code_trade_date varchar(32) PRIMARY KEY not null,
+            ts_code varchar(32) not null,
+            trade_date varchar(32),
+            bid_open float,
+            bid_close float,
+            bid_high float,
+            bid_low float,
+            ask_open float,
+            ask_close float,
+            ask_high float,
+            ask_low float,
+            tick_qty int(32),
+            exchange varchar(32));"""
     c.execute(sql)
     # 20.动能因子stock_mx
     sql = """create table if not exists stock_mx(
              ts_code_trade_date varchar(32) PRIMARY KEY not null,
              ts_code varchar(32) not null,
              trade_date varchar(32) not null,
-             mx_grade int(1) not null,
-             com_stock varchar(32) not null,
-             evd_v varchar(32) not null,
-             zt_sum_z varchar(32) not null,
-             wma250_z varchar(32) not null);"""
+             mx_grade int(1),
+             com_stock varchar(32),
+             evd_v varchar(32),
+             zt_sum_z varchar(32),
+             wma250_z varchar(32));"""
     c.execute(sql)
     # 21.估值因子stock_vx
     sql = """create table if not exists stock_vx(
              ts_code_trade_date varchar(32) PRIMARY KEY not null,
              ts_code varchar(32) not null,
              trade_date varchar(32) not null,
-             level1 varchar(32) not null,
-             level2 varchar(32) not null,
-             vx_life_v_l4 varchar(32) not null,
-             vx_3excellent_v_l4 varchar(32) not null,
-             vx_past_5q_avg_l4 varchar(32) not null,
-             vx_grow_worse_v_l4 varchar(32) not null,
-             vx_life_v_l8 varchar(32) not null,
-             vx_3excellent_v_l8 varchar(32) not null,
-             vx_past_5q_avg_l8 varchar(32) not null,
-             vx_grow_worse_v_l8 varchar(32) not null,
-             vxx varchar(32) not null,
-             vs varchar(32) not null,
-             vz11 varchar(32) not null,
-             vz24 varchar(32) not null,
-             vz_lms varchar(32) not null);"""
+             level1 varchar(32),
+             level2 varchar(32),
+             vx_life_v_l4 varchar(32),
+             vx_3excellent_v_l4 varchar(32),
+             vx_past_5q_avg_l4 varchar(32),
+             vx_grow_worse_v_l4 varchar(32),
+             vx_life_v_l8 varchar(32),
+             vx_3excellent_v_l8 varchar(32),
+             vx_past_5q_avg_l8 varchar(32),
+             vx_grow_worse_v_l8 varchar(32),
+             vxx varchar(32),
+             vs varchar(32),
+             vz11 varchar(32),
+             vz24 varchar(32),
+             vz_lms varchar(32));"""
     c.execute(sql)
     conn.commit()
     conn.close()

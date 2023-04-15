@@ -11,7 +11,7 @@ class PullStockDailyNewData:
         self.table_name = table_name
         self.data_api = DataApi() # 本地数据库数据接口
         self.pro = ts.pro_api()   # tushare云端数据接口
-        self.end_date = datetime.datetime.now().strftime("%Y%m%d")
+        self.today = datetime.datetime.now()
         self.last_day_sql=f"""select trade_date from {self.table_name} where ts_code=='update_date_record' order
                  by rowid desc limit 1;"""
 
@@ -35,11 +35,22 @@ class PullStockDailyNewData:
         conn.close()
         return date
 
+    def get_end_date(self):
+        # end_date为今日，若今日不在日历里，则向前取最近的一个
+        end_date_timestamp = self.today
+        self.end_date = end_date_timestamp.strftime("%Y%m%d")
+        while True:
+            if self.end_date in self.record_cal:
+                return
+            else:
+                end_date_timestamp = end_date_timestamp - datetime.timedelta(days=1)
+                self.end_date = end_date_timestamp.strftime("%Y%m%d")
+
     def get_update_date_list(self):
         ##########  赋值下载的开始日期、结束日期  ###################
         if self.last_day is None:
-            start_date = '19901219'
-            self.last_day = '19901219' #为了在下一个if判断有数值，该变量必须有数值
+            start_date = self.record_cal[0]
+            self.last_day = self.record_cal[0] #为了在下一个if判断有数值，该变量必须有数值
         else:
             print('上一次更新到', self.last_day)
             start_date = self.record_cal[self.record_cal.index(self.last_day)+1]  # 在数据库的最后一个日期再往后移动一天
@@ -67,6 +78,7 @@ class PullStockDailyNewData:
 
     def set_primary_key(self, df):
         # 添加primary key
+        print(df)
         df['ts_code_trade_date'] = df.apply(lambda x: x['ts_code'] + str(x['trade_date']), axis=1)
         df = df.drop_duplicates('ts_code_trade_date')
         return df
@@ -91,16 +103,17 @@ class PullStockDailyNewData:
         # 将下载的数据插入数据库
         try:
             sqlite_data.write(df, self.table_name)
-            print(f'表{self.table_name}，日期{date}，入库数据成功    ，数据长度{len(df)}')
+            print(f'表{self.table_name}，日期{date}，入库数据成功   ，数据长度{len(df)}')
         except sqlite3.IntegrityError:
             print('表{table_name}已经存在或%s' % sqlite3.IntegrityError)
 
     def run(self):
         self.last_day = self.get_last_day() # 更新的最新日期
-        if self.last_day == self.end_date: # 如果更新到今天，停止；否则获取更新日期列表
-            print(f'{self.table_name}已更新到今日{self.end_date}')
-            return
         self.record_cal = self.get_record_cal()  # 数据记录日历
+        self.get_end_date() # 获取结束日期
+        if self.last_day == self.end_date: # 如果更新到今天，停止；否则获取更新日期列表
+            print(f'表{self.table_name}已更新到最近的日期{self.end_date}')
+            return
         self.update_date_list = self.get_update_date_list() # 数据更新日期列表
         for date in self.update_date_list: # 遍历更新日期列表
             df = self.get_data_from_tushare_wait(date) # 下载数据（从数据库最后日期到今天的
@@ -137,6 +150,67 @@ class PullStkHolderTradeDailyNewData(PullStockDailyNewData):
         df2['after_share'] = 100
         df2 = self.set_primary_key(df2)
         df = pd.concat([df, df2], axis=0)
+        return df
+
+class PullStockWeeklyNewData(PullStockDailyNewData):
+    def __init__(self, table_name):
+        super().__init__(table_name)
+
+    def get_record_cal(self):
+        # 交易日历上每周最后一个交易日
+        # SSE开始于19901219 SZSE开始于19910703，因此只需要SSE。返回的交易日历仅仅是从开始时间到今年最后一天，扣除节假日。
+        trade_cal = pd.DataFrame(self.data_api.trade_cal(exchange='SSE', is_open='1', fields=['cal_date'])['cal_date'][::-1])
+        trade_cal['week_info'] = trade_cal.apply(
+            lambda x: datetime.datetime.strptime(x['cal_date'], '%Y%m%d').date().isocalendar(), axis=1)
+        trade_cal['year'] = trade_cal.apply(lambda x: x['week_info'][0], axis=1)
+        trade_cal['week'] = trade_cal.apply(lambda x: x['week_info'][1], axis=1)
+        trade_cal['day'] = trade_cal.apply(lambda x: x['week_info'][2], axis=1)
+        df = trade_cal.groupby(['year', 'week']).apply(lambda x: x[x['day'] == x['day'].max()])
+        cal_date_list = list(df['cal_date'])
+        return cal_date_list
+
+class PullStockMonthlyNewData(PullStockDailyNewData):
+    """ 下载股票月度行情 """
+    def __init__(self, table_name):
+        super().__init__(table_name)
+
+    def get_record_cal(self):
+        # 交易日历上每周最后一个交易日
+        # SSE开始于19901219 SZSE开始于19910703，因此只需要SSE。返回的交易日历仅仅是从开始时间到今年最后一天，扣除节假日。
+        trade_cal = pd.DataFrame(self.data_api.trade_cal(exchange='SSE', is_open='1', fields=['cal_date'])['cal_date'][::-1])
+        trade_cal['month_info'] = trade_cal.apply(
+            lambda x: datetime.datetime.strptime(x['cal_date'], '%Y%m%d').date(), axis=1)
+        trade_cal['year'] = trade_cal.apply(lambda x: x['month_info'].year, axis=1)
+        trade_cal['month'] = trade_cal.apply(lambda x: x['month_info'].month, axis=1)
+        trade_cal['day'] = trade_cal.apply(lambda x: x['month_info'].day, axis=1)
+        df = trade_cal.groupby(['year', 'month']).apply(lambda x: x[x['day'] == x['day'].max()])
+        cal_date_list = list(df['cal_date'])
+        return cal_date_list
+
+class PullFxDailyNewData(PullStockDailyNewData):
+    """ 下载外汇日线行情 """
+    def __init__(self, table_name):
+        super().__init__(table_name)
+
+    def get_record_cal(self):
+        trade_cal = list(self.data_api.trade_cal(exchange='SSE', fields=['cal_date'])['cal_date'][::-1])
+        return trade_cal
+
+class PullStockMxNewData(PullStockDailyNewData):
+    """ 下载外汇日线行情 """
+    def __init__(self, table_name):
+        super().__init__(table_name)
+
+    def get_record_cal(self):
+        trade_cal = list(self.data_api.trade_cal(exchange='SSE', is_open='1', fields=['cal_date'])['cal_date'][::-1])
+        trade_cal = trade_cal[trade_cal.index('20140102'):]
+        return trade_cal
+
+    def set_primary_key(self, df):
+        # 添加primary key
+        df.dropna(subset=['ts_code', 'trade_date'], inplace=True)
+        df['ts_code_trade_date'] = df.apply(lambda x: x['ts_code'] + str(x['trade_date']), axis=1)
+        df = df.drop_duplicates('ts_code_trade_date')
         return df
 
 class TushareApi:
@@ -271,7 +345,6 @@ class TushareApi:
         except sqlite3.IntegrityError:
             print('index_classify已经存在或%s' % sqlite3.IntegrityError)
 
-
     def pull_fx_obasic_all(self):
         df = self.pro.fx_obasic()
         delete_table('fx_obasic')
@@ -281,93 +354,6 @@ class TushareApi:
             print('fx_obasic下载成功')
         except sqlite3.IntegrityError:
             print('fx_obasic已经存在或%s' % sqlite3.IntegrityError)
-
-    def pull_stock_new_data(self, table_name):
-        ##########  赋值下载的开始日期、结束日期  ###################
-        data_api = DataApi()
-        # SSE开始于19901219 SZSE开始于19910703，因此只需要SSE。返回的交易日历仅仅是从开始时间到今年最后一天，并未扣除节假日。
-        trade_cal = list(data_api.trade_cal(exchange='SSE', is_open='1',fields=['cal_date'])['cal_date'][::-1])
-        # 从数据库update_date_record中查询更新daily_basic最后一个日期
-        last_day = self.get_last_day(table_name)
-        end_date = datetime.datetime.now().strftime("%Y%m%d")
-        if last_day is None:
-            start_date = '19901219'
-            last_day = '19901219' #为了在下一个if判断有数值，该变量必须有数值
-        elif last_day == end_date:
-            print(f'{table_name}已更新到今日{end_date}')
-            return
-        else:
-            print('上一次更新到', last_day)
-            start_date = trade_cal[trade_cal.index(last_day)+1]  # 在数据库的最后一个日期再往后移动一天
-        # 计算需要更新的百分比
-        update_percent = round(trade_cal.index(last_day) / trade_cal.index(end_date) * 100, 2)
-        print(f'表{table_name}已更新： {update_percent}%，', '下一步', start_date, end_date)
-        # 准备下载日期区间[start_date, end_date]
-        # if start_date == end_date:
-        #     trade_date_list = [start_date]
-        # else:
-        trade_date_list = trade_cal[trade_cal.index(start_date):trade_cal.index(end_date)+1]
-        print(trade_date_list)
-
-        ########## 下载数据（从数据库最后日期到今天的） #############
-        for date in trade_date_list:
-            # 如果接口有限制则等待5秒，直到可以继续调用
-            while True:
-                try:
-                    df = self.pro.query(table_name,trade_date=date)
-                    print(f'表{table_name}，日期{date}，下载数据成功，数据长度{len(df)}')
-                    break
-                except:
-                    print(f'在下载表{table_name}{date}时等待5秒')
-                    time.sleep(5)
-            # 判断date日期下是否有数据，有数据则添加primary key，无数据则进入下一天
-            if len(df) == 0:
-                continue
-                # 今日无数据会显示
-                ##>> 股票每日指标daily_basic已更新： 99.99 %， 下一步 20230413 20230413
-                ##>> 表daily_basic，日期20230413，下载数据成功，数据长度0
-            else:
-                # 添加primary key
-                df['ts_code_trade_date'] = df.apply(lambda x: x['ts_code'] + str(x['trade_date']), axis=1)
-                # 标记已更新日期到ts_code = update_date_record 数据上
-                df2 = pd.DataFrame({'trade_date': [date]})
-                df2['ts_code'] = 'update_date_record'
-                df2['ts_code_trade_date'] = df2.apply(lambda x: x['ts_code'] + str(x['trade_date']), axis=1)
-                df = pd.concat([df, df2], axis=0)
-            # 将下载的数据插入数据库
-            try:
-                sqlite_data.write(df, table_name)
-                print(f'表{table_name}，日期{date}，入库数据成功，数据长度{len(df)}')
-            except sqlite3.IntegrityError:
-                print('表{table_name}已经存在或%s' % sqlite3.IntegrityError)
-
-    def pull_stk_rewards_all_data(self):
-        """管理层薪酬和持股"""
-        pass
-
-    def pull_stk_holdertrade_all_data(self):
-        """股东增减持"""
-        pass
-
-    def pull_daily_basic_new_data(self):
-        """股票技术因子（量化因子）"""
-        self.pull_stock_new_data(table_name='daily_basic')
-
-    def pull_stk_factor_new_data(self):
-        """股票技术因子（量化因子）"""
-        self.pull_stock_new_data(table_name='stk_factor')
-
-    def pull_daily_new_data(self):
-        """股票技术因子（量化因子）"""
-        self.pull_stock_new_data(table_name='daily')
-
-    def pull_weekly_all_data(self):
-        """周线行情"""
-        pass
-
-    def pull_monthly_all_data(self):
-        """月线行情"""
-        pass
 
     def pull_index_daily_all_data(self):
         """
@@ -428,20 +414,7 @@ class TushareApi:
         except sqlite3.IntegrityError:
             print('index_member已经存在或%s' % sqlite3.IntegrityError)
 
-    def pull_fx_daily_new_data(self):
-        """ 外汇日线行情fx_daily """
-        # 需要改写函数
-        # self.pull_stock_new_data(table_name='fx_daily')
-
-    def pull_stock_mx_all_data(self):
-        """ 动能因子stock_mx """
-        pass
-
-    def pull_stock_vx_all_data(self):
-        """ 估值因子stock_vx """
-        pass
-
-    def pull_all_data_basic(self):
+    def pull_all_meta_data(self):
         """
         tushare所有全量数据拉取到本地并存储，基本信息部分
         :return:
@@ -454,6 +427,7 @@ class TushareApi:
         self.pull_index_basic_all()
         self.pull_index_classify_all()
         self.pull_fx_obasic_all()
+        self.pull_index_member_all()
 
     def pull_new_data(self):
         ### 增量数据拉取到本地，并存储
@@ -511,35 +485,32 @@ class TushareApi:
         conn.close()
         return date
 
-def pull_all_data_detail(self):
+def pull_all_detail_data():
     """
     tushare所有全量数据拉取到本地并存储，明细表部分
     :return:
     """
-    # self.pull_stk_factor_new_data()  # 4
-    # self.pull_index_dailybasic_all_data()  # 8
-    # self.pull_index_daily_all_data()  # 9
-    # self.pull_index_member_all()  # 10完成
-    # self.pull_fx_daily_new_data()  # 11
-    # self.pull_stock_mx_all_data()  # 12
-    # self.pull_stock_vx_all_data()  # 13
+    # self.pull_stk_factor_new_data()                        # 4 股票技术因子（量化因子）
+    # self.pull_index_dailybasic_all_data()                  # 8 先日期再遍历指数
+    # self.pull_index_daily_all_data()                       # 9 先日期再遍历指数
 
     # 只需要时间就可以遍历的
-    PullStkHolderTradeDailyNewData('stk_holdertrade').run() # 2
-    PullStockDailyNewData('daily_basic').run()  # 3完成
-    PullStockDailyNewData('daily').run() # 5完成
-    # self.pull_weekly_all_data()  # 6
-    # self.pull_monthly_all_data()  # 7
-    # self.pull_stk_rewards_all_data()  # 1 再按照日期遍历 报告期才有数据,query股票股票列表所有数据
+    PullStkHolderTradeDailyNewData('stk_holdertrade').run()  # 2 股东增减持
+    PullStockDailyNewData('daily_basic').run()               # 3完成 股票技术因子（量化因子）
+    PullStockDailyNewData('daily').run()                     # 5完成
+    PullStockWeeklyNewData('weekly').run()                   # 6完成 周线行情
+    PullStockMonthlyNewData('monthly').run()                 # 7完成 月线行情
+    # self.pull_stk_rewards_all_data()                       # 1 管理层薪酬和持股 按照日期遍历(报告期才有数据),query股票股票列表所有数据
+    PullFxDailyNewData('fx_daily').run()                     # 外汇日线行情fx_daily
+    PullStockMxNewData('stock_mx').run()                     # 12 动能因子stock_mx
+    # self.pull_stock_vx_all_data()                          # 13 估值因子stock_vx
 
 if __name__ == '__main__':
     # from sqlite_data import delete_table
-    # delete_table('stk_holdertrade')
+    # delete_table('stock_mx')
     # from sql_create_table import create_table
     # create_table()
-    # tushare_api = TushareApi()
-    # tushare_api.pull_fx_daily_new_data()
 
-    PullStkHolderTradeDailyNewData('stk_holdertrade').run()
+    PullStockMxNewData('stock_mx').run()
 
 
