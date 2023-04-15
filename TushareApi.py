@@ -516,7 +516,6 @@ def pull_all_data_detail(self):
     tushare所有全量数据拉取到本地并存储，明细表部分
     :return:
     """
-    # self.pull_stk_rewards_all_data()  # 1 按照股票遍历，再按照日期遍历 报告期才有数据
     # self.pull_stk_factor_new_data()  # 4
     # self.pull_index_dailybasic_all_data()  # 8
     # self.pull_index_daily_all_data()  # 9
@@ -531,6 +530,7 @@ def pull_all_data_detail(self):
     PullStockDailyNewData('daily').run() # 5完成
     # self.pull_weekly_all_data()  # 6
     # self.pull_monthly_all_data()  # 7
+    # self.pull_stk_rewards_all_data()  # 1 再按照日期遍历 报告期才有数据,query股票股票列表所有数据
 
 if __name__ == '__main__':
     # from sqlite_data import delete_table
