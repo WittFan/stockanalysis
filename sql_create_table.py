@@ -1,8 +1,10 @@
 import sqlite3
+from sqlite_data import DataApi
 
 def create_table():
     """创建表"""
-    conn = sqlite3.connect('data.db')
+    data_api = DataApi()
+    conn = sqlite3.connect(data_api.database)
     c = conn.cursor()
     # 1.创建股票列表stock_basic
     sql = """create table if not exists stock_basic(
@@ -85,27 +87,27 @@ def create_table():
     c.execute(sql)
     # 7.股东增减持stk_holdertrade
     sql = """create table if not exists stk_holdertrade(
-        ts_code_ann_date_holder_name varchar(32) PRIMARY KEY not null,
+        ts_code_ann_date_holder_name_after_share varchar(32) PRIMARY KEY not null,
         ts_code varchar(32) not null,
         ann_date varchar(32) not null,
         holder_name varchar(32) not null,
-        holder_type varchar(32) not null,
-        in_de varchar(32) not null,
-        change_vol float not null,
-        change_ratio float not null,
-        after_share float not null,
-        after_ratio float not null,
-        avg_price float not null,
-        total_share float not null,
-        begin_date varchar(32) not null,
-        close_date varchar(32) not null);"""
+        holder_type varchar(32),
+        in_de varchar(32),
+        change_vol float,
+        change_ratio float,
+        after_share float,
+        after_ratio float,
+        avg_price float,
+        total_share float,
+        begin_date varchar(32),
+        close_date varchar(32));"""
     c.execute(sql)
     # 8.每日指标daily_basic
     sql = """create table if not exists daily_basic(
         ts_code_trade_date varchar(32) PRIMARY KEY not null,
         ts_code varchar(32) not null,
         trade_date varchar(32) not null,
-        close float not null,
+        close float,
         turnover_rate float,
         turnover_rate_f float,
         volume_ratio float,
@@ -164,7 +166,8 @@ def create_table():
 
     # 11.A股日线行情 daily
     sql = """create table if not exists daily(
-         ts_code_trade_date varchar(32) PRIMARY KEY not null,
+         id integer PRIMARY KEY AUTOINCREMENT,
+         ts_code_trade_date varchar(32) unique not null,
          ts_code varchar(32) not null,
          trade_date varchar(32) not null,
          close float,

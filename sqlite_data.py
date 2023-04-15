@@ -51,7 +51,7 @@ def read(table_name, ts_code, start_date, end_date):
 
 class DataApi:
     def __init__(self):
-        pass
+        self.database = 'data.db'
 
     def __getattr__(self, table_name):
         """
@@ -87,7 +87,7 @@ class DataApi:
             else:
                 query += f"{key}=='{value}' AND "
         query = query[:-5] + ';'  # 去掉最后一个的' AND '
-        conn = sqlite3.connect('data.db')  # 连接数据库
+        conn = sqlite3.connect(self.database)  # 连接数据库
         df = pd.read_sql_query(query, conn)
         conn.close()
         return df
