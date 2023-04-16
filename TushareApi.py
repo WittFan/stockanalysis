@@ -78,7 +78,6 @@ class PullStockDailyNewData:
 
     def set_primary_key(self, df):
         # 添加primary key
-        print(df)
         df['ts_code_trade_date'] = df.apply(lambda x: x['ts_code'] + str(x['trade_date']), axis=1)
         df = df.drop_duplicates('ts_code_trade_date')
         return df
@@ -490,27 +489,27 @@ def pull_all_detail_data():
     tushare所有全量数据拉取到本地并存储，明细表部分
     :return:
     """
-    # self.pull_stk_factor_new_data()                        # 4 股票技术因子（量化因子）
-    # self.pull_index_dailybasic_all_data()                  # 8 先日期再遍历指数
-    # self.pull_index_daily_all_data()                       # 9 先日期再遍历指数
-
-    # 只需要时间就可以遍历的
-    PullStkHolderTradeDailyNewData('stk_holdertrade').run()  # 2 股东增减持
-    PullStockDailyNewData('daily_basic').run()               # 3完成 股票技术因子（量化因子）
-    PullStockDailyNewData('daily').run()                     # 5完成
-    PullStockWeeklyNewData('weekly').run()                   # 6完成 周线行情
-    PullStockMonthlyNewData('monthly').run()                 # 7完成 月线行情
-    # self.pull_stk_rewards_all_data()                       # 1 管理层薪酬和持股 按照日期遍历(报告期才有数据),query股票股票列表所有数据
+    # 只需遍历日期
+    PullStkHolderTradeDailyNewData('stk_holdertrade').run()  # 股东增减持
+    PullStockDailyNewData('daily_basic').run()               # 每日指标
+    PullStockDailyNewData('stk_factor').run()                # 需修改下载接口，用start,end date一次下载更多数据。股票技术因子（量化因子）
+    PullStockDailyNewData('daily').run()                     # 日线行情
+                                                             # 复权因子
+    PullStockWeeklyNewData('weekly').run()                   # 周线行情
+    PullStockMonthlyNewData('monthly').run()                 # 月线行情
     PullFxDailyNewData('fx_daily').run()                     # 外汇日线行情fx_daily
-    PullStockMxNewData('stock_mx').run()                     # 12 动能因子stock_mx
-    # self.pull_stock_vx_all_data()                          # 13 估值因子stock_vx
+    PullStockMxNewData('stock_mx').run()                     # 动能因子stock_mx
+    PullStockMxNewData('stock_vx').run()                     # 估值因子stock_vx
+    # 先遍历日期，再遍历ts_code或index_code
+    # self.pull_stk_rewards_all_data()                       # 1 管理层薪酬和持股 按照日期遍历(报告期才有数据),query股票股票列表所有数据
+    # self.pull_index_dailybasic_all_data()                  # 2 先日期再遍历指数
+    # self.pull_index_daily_all_data()                       # 3 先日期再遍历指数
 
 if __name__ == '__main__':
     # from sqlite_data import delete_table
     # delete_table('stock_mx')
     # from sql_create_table import create_table
     # create_table()
-
-    PullStockMxNewData('stock_mx').run()
-
+    # PullStockMxNewData('stock_mx').run()
+    pull_all_detail_data()
 
