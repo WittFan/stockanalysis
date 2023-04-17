@@ -217,15 +217,15 @@ def create_table():
         ts_code_trade_date varchar(32) PRIMARY KEY not null,
         ts_code varchar(32) not null,
         trade_date varchar(32) not null,
-        close float not null,
-        open float not null,
-        high float not null,
-        low float not null,
-        pre_close float not null,
-        change float not null,
-        pct_chg float not null,
-        vol float not null,
-        amount float not null);"""
+        close float,
+        open float,
+        high float,
+        low float,
+        pre_close,
+        change float,
+        pct_chg float,
+        vol float,
+        amount float);"""
     # 名称	类型	描述
     # ts_code	str	TS指数代码
     # trade_date	str	交易日
@@ -244,16 +244,16 @@ def create_table():
         ts_code_trade_date varchar(32) PRIMARY KEY not null,
         ts_code varchar(32) not null,
         trade_date varchar(32) not null,
-        total_mv float not null,
-        float_mv float not null,
-        total_share float not null,
-        float_share float not null,
-        free_share float not null,
-        turnover_rate float not null,
-        turnover_rate_f float not null,
-        pe float not null,
-        pe_ttm float not null,
-        pb float not null);"""
+        total_mv float,
+        float_mv float,
+        total_share float,
+        float_share float,
+        free_share float,
+        turnover_rate float,
+        turnover_rate_f float,
+        pe float,
+        pe_ttm float,
+        pb float);"""
     # 'TS代码+交易日期' 'TS代码' '交易日期'  '当日总市值（元）'
     # '当日流通市值（元）'   '当日总股本（股）' '当日流通股本（股）' '当日自由流通股本（股）'
     # '换手率' '换手率（基于自由流通股本）' '市盈率' '市盈率TTM' '市净率'
