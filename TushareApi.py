@@ -528,6 +528,7 @@ def pull_all_detail_data():
     # self.pull_stk_rewards_all_data()                       # 1 管理层薪酬和持股 按照日期遍历(报告期才有数据),query股票股票列表所有数据
     PullIndexDailyNewData('index_daily').run()               # 3 先日期再遍历指数，指数只更新一部分
     PullIndexDailyBasicNewData('index_dailybasic').run()     # 2 先日期再遍历指数
+
     # 特色数据有接口限制
     PullStockDailyNewData('stk_factor').run()                # 股票技术因子（量化因子）ts_code、trade_date必须选择一个
 
