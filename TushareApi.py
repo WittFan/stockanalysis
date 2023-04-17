@@ -270,7 +270,6 @@ class PullIndexDailyNewData(PullStockDailyNewData):
             day_num = self.day_num  # day_num为tushare的接口限制
             start_date = self.update_date_list[0]
             end_date = self.update_date_list[-1]
-            print(start_date, end_date)
             if len(self.update_date_list) >= day_num:
                 mid_date = self.update_date_list[day_num - 1]
             else:
@@ -288,6 +287,8 @@ class PullIndexDailyNewData(PullStockDailyNewData):
                     mid_date = end_date
             df2 = self.get_data_from_tushare_wait(ts_code=ts_code, start_date=start_date, end_date=mid_date)
             df = pd.concat([df, df2], axis=0)
+            if len(df)==0:
+                continue
             # 按照trade_date排序
             df = df.sort_values(by='trade_date')
             # 将排序前的序号删掉
@@ -295,6 +296,7 @@ class PullIndexDailyNewData(PullStockDailyNewData):
             self.set_primary_key(df)
             self.write_sqlite_data(df, self.update_date_list, ts_code)
             data_length += len(df)
+        print(f'更新表{self.table_name}，日期{self.update_date_list[0]}-{self.update_date_list[-1]},数据长度{data_length}')
         if data_length > 0:
             print(f'表{self.table_name}，日期{self.update_date_list[0]}-{self.update_date_list[-1]}，入库数据成功，数据长度{data_length}')
             df = self.data_api.query(self.table_name, ts_code='')
