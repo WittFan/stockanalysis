@@ -74,6 +74,23 @@ def create_table():
         business_scope varchar(32));"""
     c.execute(sql)
 
+    # 6.指数基本信息index_basic
+    sql = """create table if not exists index_basic(
+         ts_code varchar(32) PRIMARY KEY not null,
+         name varchar(32) not null,
+         fullname varchar(32),
+         market varchar(32),
+         publisher varchar(32),
+         index_type varchar(32),
+         category varchar(32),
+         base_date varchar(32),
+         base_point float,
+         list_date varchar(32),
+         weight_rule varchar(32),
+         desc varchar(32),
+         exp_date varchar(32));"""
+    c.execute(sql)
+
     # 6.管理层薪酬和持股stk_rewards
     sql = """create table if not exists stk_rewards(
         ts_code_name_title_ann_date varchar(32) PRIMARY KEY not null,

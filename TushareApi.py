@@ -535,8 +535,9 @@ def pull_all_detail_data():
 if __name__ == '__main__':
     # from sqlite_data import delete_table
     # delete_table('index_dailybasic')
+
     # from sql_create_table import create_table
     # create_table()
-
+    # PullMetaData().pull_all_meta_data()
     pull_all_detail_data()
 
