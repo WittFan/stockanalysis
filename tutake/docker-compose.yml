@@ -1,0 +1,9 @@
+version: "3.9"
+services:
+  tutake:
+    build: .
+    user: '1000'
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - ./main.py:/tutake/main.py
+      - ./config.yml:/tutake/config.yml
