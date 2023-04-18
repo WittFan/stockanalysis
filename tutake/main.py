@@ -34,6 +34,7 @@ def cron_task():
     tutake.task_api().start(True)  # 启动全量的数据同步任务
 
 
+
 if __name__ == '__main__':
     # 可以查看这个接口入门
     quick_start()
