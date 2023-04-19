@@ -48,9 +48,6 @@ def read(table_name, ts_code, start_date, end_date):
     conn.close()
     return df
 
-
-
-
 class DataApi:
     def __init__(self):
         self.database = database_location
