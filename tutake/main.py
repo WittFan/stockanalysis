@@ -6,8 +6,7 @@ def quick_start():
     print("========同步股票数据========")
     tutake.process_api().daily()
     print("========查询股票数据========")
-    print(tutake.tushare_api().daily(ts_code='000002.SZ'))
-
+    print(tutake.tushare_api().daily(ts_code='000001.SZ'))
 
 def complete():
     tutake = tt.Tutake("./config.yml")
