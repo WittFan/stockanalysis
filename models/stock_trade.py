@@ -114,7 +114,7 @@ class StockMx(Base):
     circ_mv = Column(Float, comment='流通市值')
 
     # 20.动能因子stock_mx
-    sql = """create table if not exists (
+"""create table if not exists (
              ts_code_trade_date varchar(32) PRIMARY KEY not null,
              ts_code varchar(32) not null,
              trade_date varchar(32) not null,
@@ -123,9 +123,9 @@ class StockMx(Base):
              evd_v varchar(32),
              zt_sum_z varchar(32),
              wma250_z varchar(32));"""
-    c.execute(sql)
+
     # 21.估值因子stock_vx
-    sql = """create table if not exists stock_vx(
+"""create table if not exists stock_vx(
              ts_code_trade_date varchar(32) PRIMARY KEY not null,
              ts_code varchar(32) not null,
              trade_date varchar(32) not null,

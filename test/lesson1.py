@@ -7,8 +7,8 @@ import datetime
 cerebro = bt.Cerebro()
 
 # 读取数据
-daily_price = pd.read_csv('data/daily_price.csv', parse_dates=['datetime'])
-trade_info = pd.read_csv('data/trade_info.csv', parse_dates=['trade_date'])
+daily_price = pd.read_csv('../data/daily_price.csv', parse_dates=['datetime'])
+trade_info = pd.read_csv('../data/trade_info.csv', parse_dates=['trade_date'])
 
 
 # 按照股票代码，依次传入数据
