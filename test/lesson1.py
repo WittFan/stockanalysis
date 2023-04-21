@@ -76,6 +76,7 @@ class TestStrategy(bt.Strategy):
             for stock in long_list:
                 w = buy_stocks_data.query(f"sec_code=='{stock}'")['weight'].iloc[0]  # 提取持仓权重
                 data = self.getdatabyname(stock)
+                print(data)
                 order = self.order_target_percent(data=data, target=w * 0.95)  # 为减少可用资金不足的情况
                 self.order_list.append(order)
 
