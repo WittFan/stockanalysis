@@ -514,7 +514,7 @@ def pull_all_detail_data():
     tushare所有全量数据拉取到本地并存储，明细表部分
     :return:
     """
-    # 只需遍历日期 
+    # 只需遍历日期
     PullStkHolderTradeDailyNewData('stk_holdertrade').run()  # 股东增减持
     PullStockDailyNewData('daily_basic').run()               # 每日指标
     PullStockDailyNewData('daily').run()                     # 日线行情
