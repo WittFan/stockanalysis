@@ -7,7 +7,6 @@ from sqlalchemy import create_engine
 """
 Sqlite连接：注意注意注意：这个URI连接的相对地址，指的是相对于最外层调用的文件的相对位置，而不是此文件的相对位置。所以最好是使用绝对路径。
 """
-
 engine = create_engine(SQLITE_URI, echo=True) # 操作数据句柄
 Session = sessionmaker(bind=engine)  # 这里一定要用上下文去管理session,否则会出现很多诡异的情况！！！切记
 session = scoped_session(Session)    # 创建数据库链接池，直接使用session即可为当前线程拿出一个链接对象conn
