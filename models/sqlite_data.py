@@ -1,56 +1,11 @@
 import sqlite3
 import pandas as pd
 from functools import partial
-# 下一步：将data.db拆分到项目文件夹外面，将路径名称放到前面公用
-
-database_location = 'data/data.db'
-
-def write(dataframe, table_name):
-    """
-    将数据写入本地sqlite
-    :param dataframe:
-    :param table_name:
-    :return:
-    """
-    conn = sqlite3.connect(database_location)
-    dataframe.to_sql(table_name, conn, if_exists='append', index=False)
-    conn.close()
-
-def delete_table(table_name):
-    """创建表"""
-    conn = sqlite3.connect(database_location)
-    c = conn.cursor()
-    "创建表index_dailybasic表"
-    sql = """drop table %s""" %table_name
-    c.execute(sql)
-    conn.commit()
-    conn.close()
-
-def delete_data(table_name, ts_code):
-    """创建表"""
-    conn = sqlite3.connect(database_location)
-    c = conn.cursor()
-    "创建表index_dailybasic表"
-    sql = """delete from %s where ts_code=='%s'""" %(table_name, ts_code)
-    c.execute(sql)
-    conn.commit()
-    conn.close()
-
-def read(table_name, ts_code, start_date, end_date):
-    """
-    从sqlite数据库读index_dailybasic数据
-    :return:
-    df = pro.index_dailybasic(trade_date='20181018', fields='ts_code,trade_date,turnover_rate,pe')
-    """
-    conn = sqlite3.connect(database_location)
-    sql = """select * from %s where ts_code=='%s' and trade_date>='%s' and trade_date<='%s';""" %(table_name, ts_code, start_date, end_date)
-    df = pd.read_sql_query(sql, conn)
-    conn.close()
-    return df
+from .config import SQLITE_URI
 
 class DataApi:
     def __init__(self):
-        self.database = database_location
+        self.database = SQLITE_URI
 
     def __getattr__(self, table_name):
         """
@@ -91,8 +46,57 @@ class DataApi:
         conn.close()
         return df
 
+    @staticmethod
+    def write(dataframe, table_name):
+        """
+        将数据写入本地sqlite
+        :param dataframe:
+        :param table_name:
+        :return:
+        """
+        conn = sqlite3.connect(SQLITE_URI)
+        dataframe.to_sql(table_name, conn, if_exists='append', index=False)
+        conn.close()
+
+    @staticmethod
+    def delete_table(table_name):
+        """创建表"""
+        conn = sqlite3.connect(SQLITE_URI)
+        c = conn.cursor()
+        "创建表index_dailybasic表"
+        sql = """drop table %s""" % table_name
+        c.execute(sql)
+        conn.commit()
+        conn.close()
+
+    @staticmethod
+    def delete_data(table_name, ts_code):
+        """创建表"""
+        conn = sqlite3.connect(SQLITE_URI)
+        c = conn.cursor()
+        "创建表index_dailybasic表"
+        sql = """delete from %s where ts_code=='%s'""" % (table_name, ts_code)
+        c.execute(sql)
+        conn.commit()
+        conn.close()
+
+    @staticmethod
+    def read(table_name, ts_code, start_date, end_date):
+        """
+        从sqlite数据库读index_dailybasic数据
+        :return:
+        df = pro.index_dailybasic(trade_date='20181018', fields='ts_code,trade_date,turnover_rate,pe')
+        """
+        conn = sqlite3.connect(SQLITE_URI)
+        sql = """select * from %s where ts_code=='%s' and trade_date>='%s' and trade_date<='%s';""" % (
+        table_name, ts_code, start_date, end_date)
+        df = pd.read_sql_query(sql, conn)
+        conn.close()
+        return df
+
 if __name__ == '__main__':
     pass
+
     # delete_table('trade_cal')
     # 删除数据
 
