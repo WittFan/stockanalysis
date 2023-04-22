@@ -535,8 +535,8 @@ def pull_all_detail_data():
     PullStockDailyNewData('stk_factor').run()                # 股票技术因子（量化因子）ts_code、trade_date必须选择一个
 
 if __name__ == '__main__':
-    from models import DataApi
-    DataApi.delete_table('index_dailybasic')
+    from models import data_api
+    data_api.delete_table('index_dailybasic')
 
     # from sql_create_table import create_table
     # create_table()
