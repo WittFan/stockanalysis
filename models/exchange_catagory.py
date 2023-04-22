@@ -1,7 +1,6 @@
 """ 注册的sqlAlchemy ORM表主要是交易所相关的表，还有日历相关的"""
 
-from .base import Base
-from sqlalchemy.orm import relationship
+from .base import Base  # 多个model继承同一个Base
 from sqlalchemy import (
     create_engine,
     Column,
