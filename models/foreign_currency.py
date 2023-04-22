@@ -1,5 +1,5 @@
 """ 注册的sqlAlchemy ORM表主要是外汇相关"""
-from .base import Base # 多个model继承同一个Base
+from models.base import Base # 多个model继承同一个Base
 from sqlalchemy import (
     create_engine,
     Column,

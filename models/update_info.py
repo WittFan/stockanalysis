@@ -1,6 +1,6 @@
 """ 注册的sqlAlchemy ORM表主要是记录数据下载信息，验证数据完整性的信息"""
 
-from .base import Base  # 多个model继承同一个Base
+from models.base import Base  # 多个model继承同一个Base
 from sqlalchemy import (
     create_engine,
     Column,

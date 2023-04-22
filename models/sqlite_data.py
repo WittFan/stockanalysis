@@ -1,11 +1,11 @@
 import sqlite3
 import pandas as pd
 from functools import partial
-from .config import SQLITE_URI
+from models.config import sqlite3_url
 
 class DataApi:
     def __init__(self):
-        self.database = SQLITE_URI
+        self.database = sqlite3_url
 
     def __getattr__(self, table_name):
         """
@@ -54,14 +54,14 @@ class DataApi:
         :param table_name:
         :return:
         """
-        conn = sqlite3.connect(SQLITE_URI)
+        conn = sqlite3.connect(sqlite3_url)
         dataframe.to_sql(table_name, conn, if_exists='append', index=False)
         conn.close()
 
     @staticmethod
     def delete_table(table_name):
         """创建表"""
-        conn = sqlite3.connect(SQLITE_URI)
+        conn = sqlite3.connect(sqlite3_url)
         c = conn.cursor()
         "创建表index_dailybasic表"
         sql = """drop table %s""" % table_name
@@ -72,7 +72,7 @@ class DataApi:
     @staticmethod
     def delete_data(table_name, ts_code):
         """创建表"""
-        conn = sqlite3.connect(SQLITE_URI)
+        conn = sqlite3.connect(sqlite3_url)
         c = conn.cursor()
         "创建表index_dailybasic表"
         sql = """delete from %s where ts_code=='%s'""" % (table_name, ts_code)
@@ -87,15 +87,20 @@ class DataApi:
         :return:
         df = pro.index_dailybasic(trade_date='20181018', fields='ts_code,trade_date,turnover_rate,pe')
         """
-        conn = sqlite3.connect(SQLITE_URI)
+        conn = sqlite3.connect(sqlite3_url)
         sql = """select * from %s where ts_code=='%s' and trade_date>='%s' and trade_date<='%s';""" % (
         table_name, ts_code, start_date, end_date)
         df = pd.read_sql_query(sql, conn)
         conn.close()
         return df
 
+data_api = DataApi()
+
 if __name__ == '__main__':
     pass
+
+    from models import DataApi
+    DataApi.delete_table('index_daily')
 
     # delete_table('trade_cal')
     # 删除数据
