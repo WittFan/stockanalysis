@@ -3,7 +3,7 @@ import pandas as pd
 from functools import partial
 from models.config import sqlite3_url, SQLITE_URI
 from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, delete, update, text
 
 engine = create_engine(SQLITE_URI, echo=False)  # 操作数据句柄
 Session = sessionmaker(bind=engine)  # 这里一定要用上下文去管理session,否则会出现很多诡异的情况！！！切记
@@ -23,6 +23,17 @@ class DataApi:
         """
         dataframe.to_sql(table_name, engine, if_exists='append', index=False)
 
+    @staticmethod
+    def delete_data():
+        """ 删除表或表中数据 delete_magic: delete(User).where(User.name=='梁山') """
+        session.commit()  # 提交
+        session.close()   # 关闭
+
+    @staticmethod
+    def delete_table(model):
+        """ 删除表或表中数据 delete_magic: delete(User).where(User.name=='梁山') """
+        model.__table__.drop(engine)
+
     def query(self, query_magic):
         """用 sqlAlchemy 的 session.query 查询数据库，结合pandas.read_sql"""
         df = pd.read_sql(query_magic.statement, query_magic.session.bind)
@@ -30,26 +41,19 @@ class DataApi:
         return df
 
     @staticmethod
-    def delete_table(table_name):
-        """ 删除表 """
-        conn = sqlite3.connect(sqlite3_url)
-        c = conn.cursor()
-        "创建表index_dailybasic表"
-        sql = """drop table %s""" % table_name
-        c.execute(sql)
-        conn.commit()
-        conn.close()
+    def update(update_magic):
+        # 进行更新操作
+        session.execute(update_magic)
+        # 提交与关闭
+        session.commit()
+        session.close()
 
     @staticmethod
-    def delete_data(table_name, ts_code):
-        """ 删除数据 """
-        conn = sqlite3.connect(sqlite3_url)
-        c = conn.cursor()
-        "创建表index_dailybasic表"
-        sql = """delete from %s where ts_code=='%s'""" % (table_name, ts_code)
-        c.execute(sql)
-        conn.commit()
-        conn.close()
+    def sql(sql_str):
+        data = session.execute(sql_str)
+        session.close()
+        df = pd.DataFrame(data)
+        return df
 
 data_api = DataApi()
 
@@ -61,21 +65,30 @@ if __name__ == '__main__':
     df = pd.DataFrame([['SSE', '20230415', 1, '20230414'],
                        ['SSE', '20230414', 1, '20230413']],
                       columns=['exchange', 'cal_date', 'is_open', 'pretrade_date'])
-    data_api.write(df, Test.__name__)
+    data_api.write(df, Test.__tablename__)
 
-    # 2.查询数据
-    query_magic = session.query(Test).filter(Test.id > 1).filter(Test.exchange=='SSE')
-    df = data_api.query(query_magic)
+    # 2.删除数据
+
+    # 按照条件删除表数据
+    # session.execute(delete(Test).filter(Test.cal_date=='20230415'))
+    # data_api.delete_data()
+
+    # # 清空表
+    # session.execute(delete(Test))
+    # data_api.delete_data()
+
+    # 删除表
+    # data_api.delete_table(Test)
+
+    # # 3.更新数据
+    # update_magic = update(Test).where(Test.cal_date == "20230415").values(cal_date="王老五")
+    # data_api.update(update_magic)
+    #
+    # 4.查询数据
+    # query_magic = session.query(Test).filter(Test.id > 0).filter(Test.exchange=='SSE')
+    # df = data_api.query(query_magic)
+    # print(df)
+
+    # 5.原生sql
+    df = data_api.sql(text('select * from test;'))
     print(df)
-
-    # 3.删除表
-    # DataApi.delete_table('index_daily')
-    # delete_table('trade_cal')
-    # 删除数据
-
-    # from TushareApi import TushareApi
-    # api = TushareApi()
-    # for i in api.ts_code_set:
-    #     delete_data('index_daily', i)
-    # data_api = DataApi()
-    # print(data_api.index_dailybasic(ts_code='000001.SH', start_date='20040108', end_date='20230322'))
