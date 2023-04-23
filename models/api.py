@@ -1,50 +1,17 @@
 import sqlite3
 import pandas as pd
 from functools import partial
-from models.config import sqlite3_url
+from models.config import sqlite3_url, SQLITE_URI
+from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy import create_engine
+
+engine = create_engine(SQLITE_URI, echo=False)  # 操作数据句柄
+Session = sessionmaker(bind=engine)  # 这里一定要用上下文去管理session,否则会出现很多诡异的情况！！！切记
+session = scoped_session(Session)  # 创建数据库链接池，直接使用session即可为当前线程拿出一个链接对象conn #内部会采用threading.local进行隔离
 
 class DataApi:
     def __init__(self):
         self.database = sqlite3_url
-
-    def __getattr__(self, table_name):
-        """
-        DataApi.name ， name为表名
-        使用：
-        data_api = DataApi()
-        data_api.index_dailybasic('000001.SH', '20040101', '20230101')
-        :param name:
-        :return:
-        """
-        return partial(self.query, table_name)
-
-    def query(self, table_name, **kwargs):
-        # 构造 SQL 查询语句
-        # 输出的字段fields
-        try:
-            fields = kwargs['fields']
-            sql_field = ''
-            for i in fields:
-                sql_field += f'{i},'
-            sql_field = sql_field[:-1]
-            query = f"SELECT {sql_field} FROM {table_name} WHERE "
-        except:
-            query = f"SELECT * FROM {table_name} WHERE "
-        # 查询的字段
-        for key, value in kwargs.items():
-            if key == 'fields':  # 因为前面对fields进行了处理
-                continue
-            elif key == 'start_date':
-                query += f"trade_date >= '{value}' AND "
-            elif key == 'end_date':
-                query += f"trade_date <= '{value}' AND "
-            else:
-                query += f"{key}=='{value}' AND "
-        query = query[:-5] + ';'  # 去掉最后一个的' AND '
-        conn = sqlite3.connect(self.database)  # 连接数据库
-        df = pd.read_sql_query(query, conn)
-        conn.close()
-        return df
 
     @staticmethod
     def write(dataframe, table_name):
@@ -54,13 +21,17 @@ class DataApi:
         :param table_name:
         :return:
         """
-        conn = sqlite3.connect(sqlite3_url)
-        dataframe.to_sql(table_name, conn, if_exists='append', index=False)
-        conn.close()
+        dataframe.to_sql(table_name, engine, if_exists='append', index=False)
+
+    def query(self, query_magic):
+        """用 sqlAlchemy 的 session.query 查询数据库，结合pandas.read_sql"""
+        df = pd.read_sql(query_magic.statement, query_magic.session.bind)
+        session.close()
+        return df
 
     @staticmethod
     def delete_table(table_name):
-        """创建表"""
+        """ 删除表 """
         conn = sqlite3.connect(sqlite3_url)
         c = conn.cursor()
         "创建表index_dailybasic表"
@@ -71,7 +42,7 @@ class DataApi:
 
     @staticmethod
     def delete_data(table_name, ts_code):
-        """创建表"""
+        """ 删除数据 """
         conn = sqlite3.connect(sqlite3_url)
         c = conn.cursor()
         "创建表index_dailybasic表"
@@ -80,28 +51,25 @@ class DataApi:
         conn.commit()
         conn.close()
 
-    @staticmethod
-    def read(table_name, ts_code, start_date, end_date):
-        """
-        从sqlite数据库读index_dailybasic数据
-        :return:
-        df = pro.index_dailybasic(trade_date='20181018', fields='ts_code,trade_date,turnover_rate,pe')
-        """
-        conn = sqlite3.connect(sqlite3_url)
-        sql = """select * from %s where ts_code=='%s' and trade_date>='%s' and trade_date<='%s';""" % (
-        table_name, ts_code, start_date, end_date)
-        df = pd.read_sql_query(sql, conn)
-        conn.close()
-        return df
-
 data_api = DataApi()
 
 if __name__ == '__main__':
     pass
+    from models import data_api
+    from models import *
+    # 1.增加数据
+    df = pd.DataFrame([['SSE', '20230415', 1, '20230414'],
+                       ['SSE', '20230414', 1, '20230413']],
+                      columns=['exchange', 'cal_date', 'is_open', 'pretrade_date'])
+    data_api.write(df, Test.__name__)
 
-    from models import DataApi
-    DataApi.delete_table('index_daily')
+    # 2.查询数据
+    query_magic = session.query(Test).filter(Test.id > 1).filter(Test.exchange=='SSE')
+    df = data_api.query(query_magic)
+    print(df)
 
+    # 3.删除表
+    # DataApi.delete_table('index_daily')
     # delete_table('trade_cal')
     # 删除数据
 

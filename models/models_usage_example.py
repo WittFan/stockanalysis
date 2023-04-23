@@ -13,9 +13,9 @@ session = scoped_session(Session)    # 创建数据库链接池，直接使用se
 def add():
     trade_cal1 = models.Test(
         exchange='SSE',
-        cal_date='20230418',
+        cal_date='20230416',
         is_open=1,
-        pretrade_date='20230417')
+        pretrade_date='20230415')
     session.add(trade_cal1)
     session.commit()
     session.close()
@@ -28,5 +28,5 @@ def query():
     session.close()
 
 if __name__=='__main__':
-    query()
+    add()
 
