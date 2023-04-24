@@ -22,8 +22,8 @@ APScheduler全称Advanced Python Scheduler 作用为在指定的时间规则执�
 ![img.png](img.png)
 
 ## 二、调度器详解
-BlockingScheduler : 阻塞式调度器：适用于只跑调度器的程序。
-BackgroundScheduler: 后台调度器：适用于非阻塞的情况，调度器会在后台独立运行
+BlockingScheduler : 阻塞式调度器：适用于只跑调度器的程序。 看成是单线程，如果在程序中仅仅只运行定时任务，那么就应该选择阻塞式调度器。
+BackgroundScheduler: 后台调度器：适用于非阻塞的情况，调度器会在后台独立运行。看成是多线程，如果在程序中除了运行定时任务，咱们还想同时做点别的计算啥的，那就应该选择后台调度器。
 AsyncIOScheduler : AsyncIO调度器，适用于应用使用AsnycIO的情况。
 GeventScheduler : Gevent调度器，适用于应用通过Gevent的情况。
 TornadoScheduler: Tornado调度器，适用于构建Tornado应用。
@@ -163,4 +163,50 @@ x,y,z	所有	组合表达式，可以组合确定值或上方的表达式
     scheduler.add_job(job, 'cron', hour='8, 20', minute=30, max_instances=4)
     
     scheduler.start()
+```
+## 默认十个线程
+APScheduler调度器线程池默认只有10个线程，当55个任务同事启动，所以只有10个任务拿到了资源可以正常运行。如果这55个任务不是同事运行，其实就不会有这种现象。
+
+解决方法
+
+1、错峰运行
+
+55个任务错开时间运行，这样减少并发，可以降低瞬间大量任务给服务器造成瞬时压力，对高并发要求不高的情况可以考虑这个方案。
+
+2、调度器线程数
+
+通过参数配置，可以增大调度器的线程数、进程数。缺点就是如果并发量太大，短时间对服务器资源造成较大压力。
+
+```python
+import time
+import datetime
+from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
+ 
+def task(x):
+    time.sleep(5)
+    print('任务', x, datetime.datetime.now())
+ 
+if __name__ == '__main__':
+ 
+    # 配置调度器线程数、进程数
+    executors = {
+        'default': ThreadPoolExecutor(100),
+        'processpool': ProcessPoolExecutor(1)
+    }
+    scheduler = BlockingScheduler(executors=executors)
+ 
+    scheduler.add_job(func=task, args=('1',), trigger='cron', hour='10', minute='4', second='0', id='task1')
+    scheduler.add_job(func=task, args=('2',), trigger='cron', hour='10', minute='4', second='0', id='task2')
+    scheduler.add_job(func=task, args=('3',), trigger='cron', hour='10', minute='4', second='0', id='task3')
+    scheduler.add_job(func=task, args=('4',), trigger='cron', hour='10', minute='4', second='0', id='task4')
+    scheduler.add_job(func=task, args=('5',), trigger='cron', hour='10', minute='4', second='0', id='task5')
+    scheduler.add_job(func=task, args=('6',), trigger='cron', hour='10', minute='4', second='0', id='task6')
+    scheduler.add_job(func=task, args=('7',), trigger='cron', hour='10', minute='4', second='0', id='task7')
+    scheduler.add_job(func=task, args=('8',), trigger='cron', hour='10', minute='4', second='0', id='task8')
+    scheduler.add_job(func=task, args=('9',), trigger='cron', hour='10', minute='4', second='0', id='task9')
+    scheduler.add_job(func=task, args=('10',), trigger='cron', hour='10', minute='4', second='0', id='task10')
+    scheduler.add_job(func=task, args=('11',), trigger='cron', hour='10', minute='4', second='0', id='task11')
+    scheduler.add_job(func=task, args=('12',), trigger='cron', hour='10', minute='4', second='0', id='task12')
+    scheduler.add_job(func=task, args=('13',), trigger='cron', hour='10', minute='4', second='0', id='task13')
 ```

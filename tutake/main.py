@@ -3,8 +3,12 @@ import tutake as tt
 
 def quick_start():
     tutake = tt.Tutake("./config.yml")
-    print("========同步股票数据========")
+    print("========同步股票数据1========")
     tutake.process_api().daily()
+    print("========同步股票数据2========")
+    tutake.process_api().daily_basic()
+    print("========同步股票数据3========")
+    tutake.process_api().monthly()
     print("========查询股票数据========")
     print(tutake.tushare_api().daily(ts_code='000001.SZ'))
 
