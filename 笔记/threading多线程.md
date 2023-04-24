@@ -4,7 +4,7 @@ import threading
 th = threading.Thread(target=matter2, args=(music, test))
 th.start()
 ```
-多线程要在start()前都用threading.Thread注册完，因为th.start()一次只能启动一下。
+threading.Thread.join(th)为自闭方法，再th运行完后再运行后面的程序。
 
 ```python
 import time

@@ -4,15 +4,15 @@ import threading
 
 def matter1(music, test):
     print(test, music)
-    print('matter 1')
+    time.sleep(2)
+    print('matter1 stop')
     # 假设每一首歌曲的时间是2秒
-    time.sleep(3)
 
 def matter2(music, test):
-    print('matter 2')
     print(test, music)
+    time.sleep(1)
+    print('matter2 stop')
     # 假设每一首歌曲的时间是2秒
-    time.sleep(2)
 
 if __name__ == '__main__':
     # 设定我要听的歌为
@@ -26,27 +26,21 @@ if __name__ == '__main__':
     for music in musics:
         th = threading.Thread(target=matter1, args=(music, test))
         threadpool.append(th)
-    for music in musics:
-        th = threading.Thread(target=matter2, args=(music, test))
-        threadpool.append(th)
-    for music in musics:
-        th = threading.Thread(target=matter2, args=(music, test))
-        threadpool.append(th)
     for th in threadpool:
         th.start()
     for th in threadpool:
         # 自闭
         threading.Thread.join(th)
 
-    # threadpool2 = []
-    # for music in musics:
-    #     th = threading.Thread(target=matter2, args=(music, test))
-    #     threadpool2.append(th)
-    # for th in threadpool2:
-    #     th.start()
-    # for th in threadpool2:
-    #     # 自闭
-    #     threading.Thread.join(th)
+    threadpool2 = []
+    for music in musics:
+        th = threading.Thread(target=matter2, args=(music, test))
+        threadpool2.append(th)
+    for th in threadpool2:
+        th.start()
+    for th in threadpool2:
+        # 自闭
+        threading.Thread.join(th)
 
     # 结束时间
     end = time.time()
