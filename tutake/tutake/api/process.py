@@ -79,6 +79,7 @@ class DataProcess:
                         return ActionResult(start, time.time(), param, new_param, err=err, status='Failed')
 
                 task_id = process.add_task(description=self.name, total=len(params))
+                # 线程池
                 with ThreadPoolExecutor(max_workers=self.config.get_process_thread_cnt()) as pool:
                     for result in pool.map(action, params):
                         process.advance(task_id, 1)
