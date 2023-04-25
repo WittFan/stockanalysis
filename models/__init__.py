@@ -4,7 +4,7 @@
 # models.py 模块下各个文件的用处
 
 # table models模块
-# 将各个文件下（exchange_info.py 等）的table model导入__init__.py，导入models模块后可以直接使用这些table model
+# 将各个文件下（exchange_info_tushare.py 等）的table model导入__init__.py，导入models模块后可以直接使用这些table model
 # base.py # 基类
 from .exchange_info import *
 from .foreign_currency import *

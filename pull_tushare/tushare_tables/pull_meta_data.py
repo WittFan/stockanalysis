@@ -9,7 +9,7 @@ class PullMetaData:
     def __init__(self):
         pass
 
-    def pull_stock_basic_all(self):
+    def pull_stock_basic(self):
         """1.股票列表stock_basic"""
         df = self.pro.stock_basic(fields='ts_code,symbol,name,area,industry,fullname,enname,cnspell,market,exchange,curr_type,list_status,list_date,delist_date,is_hs')
         delete_table('stock_basic')
@@ -20,7 +20,7 @@ class PullMetaData:
         except sqlite3.IntegrityError:
             print('stock_basic已经存在或%s' %sqlite3.IntegrityError)
 
-    def pull_trade_cal_all(self):
+    def pull_trade_cal(self):
         """2.交易日历trade_cal"""
         # 交易所SSE上交所, SZSE深交所, CFFEX中金所, SHFE上期所, CZCE郑商所, DCE大商所, INE上能源
         df = pd.DataFrame()
