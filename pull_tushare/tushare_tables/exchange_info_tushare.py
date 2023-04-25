@@ -3,6 +3,7 @@ from models import *
 from models.api import *
 import pandas as pd
 import sqlite3
+import datetime
 
 class TradeCalTushare:
     def __init__(self):
@@ -24,7 +25,7 @@ class TradeCalTushare:
         conn.close()
         return date
 
-    def pull(self):
+    def down_write(self):
         """2.交易日历trade_cal"""
         # 交易所SSE上交所, SZSE深交所, CFFEX中金所, SHFE上期所, CZCE郑商所, DCE大商所, INE上能源
         df = pd.DataFrame()
@@ -40,3 +41,13 @@ class TradeCalTushare:
             print('trade_cal下载成功')
         except sqlite3.IntegrityError:
             print('trade_cal已经存在或%s' % sqlite3.IntegrityError)
+
+    def pull(self):
+        # 取下日历日期最后一天，上次更新到n年12月30日
+        # 是否过了n年11月31，如果过了每天尝试更新下一年
+        trade_cal_tushare = TradeCalTushare()
+        last_day = trade_cal_tushare.get_last_day()
+        # n = last_day
+        today = datetime.date.today()
+        if today > datetime.datetime(year=2023, month=11, day=31):
+            trade_cal_tushare.down_write()
