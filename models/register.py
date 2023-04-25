@@ -4,6 +4,7 @@
 from models import *  # 导入所有table model
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import create_engine
+from config import SQLITE_URI
 """
 Sqlite连接：注意注意注意：这个URI连接的相对地址，指的是相对于最外层调用的文件的相对位置，而不是此文件的相对位置。所以最好是使用绝对路径。
 """

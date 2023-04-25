@@ -16,7 +16,6 @@ from .update_info import *
 
 
 # 处理数据库的模块
-from .api import *           # 数据接口，有类DataApi
-from .config import SQLITE_URI       # 配置文件：数据库地址
+# from .api import *           # 数据接口，有类DataApi
 # models_usage_example.py    models使用实验
 # register.py                注册数据模型
