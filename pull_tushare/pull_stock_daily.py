@@ -13,7 +13,7 @@ class PullStockDaily:
     def get_record_cal(self):
         # 股票的交易日历
         # SSE开始于19901219 SZSE开始于19910703，因此只需要SSE。返回的交易日历仅仅是从开始时间到今年最后一天，扣除节假日。
-        query_magic = session.query(TradeCal.cal_date).filter(TradeCal.is_open==1 and TradeCal.exchange==1)
+        query_magic = session.query(TradeCal).filter(TradeCal.exchange=='SSE').filter(TradeCal.is_open == '1')
         trade_cal = data_api.query(query_magic)['cal_date'][::-1]
         trade_cal = list(trade_cal)
         return trade_cal

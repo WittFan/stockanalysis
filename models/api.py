@@ -17,7 +17,8 @@ class DataApi:
         :param table_name:
         :return:
         """
-        dataframe.to_sql(table_model.__name__, engine, if_exists='append', index=False)
+        print(table_model.__tablename__)
+        dataframe.to_sql(table_model.__tablename__, engine, if_exists='append', index=False)
 
     @staticmethod
     def delete_data(delete_magic):
@@ -66,15 +67,15 @@ if __name__ == '__main__':
     # 2.删除数据
 
     # 按照条件删除表数据
-    delete_magic = delete(Test).filter(Test.cal_date=='20230415')
-    data_api.delete_data(delete_magic)
+    # delete_magic = delete(Test).filter(Test.cal_date=='20230415')
+    # data_api.delete_data(delete_magic)
 
     # # 清空表
     # session.execute(delete(Test))
     # data_api.delete_data()
 
     # 删除表
-    # data_api.delete_table(Test)
+    data_api.delete_table(Test)
 
     # # 3.更新数据
     # update_magic = update(Test).where(Test.cal_date == "20230415").values(cal_date="王老五")
@@ -82,6 +83,8 @@ if __name__ == '__main__':
     #
     # 4.查询数据
     query_magic = session.query(Test).filter(Test.id > 0).filter(Test.exchange=='SSE')
+    df = data_api.query(query_magic)
+    query_magic = session.query(TradeCal)
     df = data_api.query(query_magic)
     print(df)
 
