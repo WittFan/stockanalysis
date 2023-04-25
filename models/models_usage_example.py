@@ -1,7 +1,7 @@
 import models
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import create_engine
-from models.config import SQLITE_URI
+from config import SQLITE_URI
 import pandas as pd
 
 # engine = create_engine(SQLITE_URI) # 操作数据句柄

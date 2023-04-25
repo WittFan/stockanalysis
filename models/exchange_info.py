@@ -27,7 +27,8 @@ class Test(Base):
 class TradeCal(Base):
     """交易日历表"""
     __tablename__ = "trade_cal"
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    exchange_cal_date = Column(String, primary_key=True, comment='唯一标识')
+    id = Column(Integer, autoincrement=True)
     exchange = Column(String, index=True, comment='交易所 SSE上交所 SZSE深交所')
     cal_date = Column(String, index=True, comment='日历日期')
     is_open = Column(String, index=True, comment='是否交易 0休市 1交易')
