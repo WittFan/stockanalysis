@@ -5,9 +5,9 @@ import datetime
 def manual_start():
     pass
     # 1.年度日历
-    year_list = [TradeCalTushare]
-    for i in year_list:
-        i().pull()
+    tushare_api_year_list = [TradeCalTushare]
+    for tushare_api_object in tushare_api_year_list:
+        tushare_api_object().pull()
 
     # 2.月行情
     month_list = []
