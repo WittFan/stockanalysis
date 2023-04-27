@@ -6,8 +6,8 @@ def manual_start():
     """ 手动更新所有tushare数据（非定时任务）"""
     pass
     # 1.年度日历
-    tushare_api_year_list = [TradeCalTushare]
-    for tushare_api_object in tushare_api_year_list:
+    tushare_api_yearly_update = [TradeCalTushare]
+    for tushare_api_object in tushare_api_yearly_update:
         tushare_api_object().pull()
 
     # 2.月行情: 股票月行情、复权行情，指数基本信息、“成分和权重”、申万行业分类、月行情，
