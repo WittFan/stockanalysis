@@ -18,7 +18,7 @@ class Daily(Base):
     __tablename__ = "daily"
     ts_code_trade_date = Column(Integer, primary_key=True)
     ts_code = Column(String, index=True, comment='股票代码')
-    trade_date = Column(String, index=True, comment='交易日期')
+    trade_date = Column(DateTime, index=True, comment='交易日期')
     open = Column(Float, comment='开盘价')
     high = Column(Float, comment='最高价')
     low = Column(Float, comment='最低价')
@@ -33,7 +33,7 @@ class Weekly(Base):
     __tablename__ = "weekly"
     ts_code_trade_date = Column(Integer, primary_key=True)
     ts_code = Column(String, index=True, comment='')
-    trade_date = Column(String, index=True, comment='')
+    trade_date = Column(DateTime, index=True, comment='')
     close = Column(Float, comment='')
     open = Column(Float, comment='')
     high = Column(Float, comment='')
@@ -48,7 +48,7 @@ class Monthly(Base):
     __tablename__ = "monthly"
     ts_code_trade_date = Column(Integer, primary_key=True)
     ts_code = Column(String, index=True, comment='')
-    trade_date = Column(String, index=True, comment='')
+    trade_date = Column(DateTime, index=True, comment='')
     close = Column(Float, comment='')
     open = Column(Float, comment='')
     high = Column(Float, comment='')
@@ -63,14 +63,14 @@ class AdjFactor(Base):
     __tablename__ = "adj_factor"
     ts_code_trade_date = Column(Integer, primary_key=True)
     ts_code = Column(String, index=True, comment='股票代码')
-    trade_date = Column(String, index=True, comment='交易日期')
+    trade_date = Column(DateTime, index=True, comment='交易日期')
     adj_factor = Column(Float, comment='复权因子')
 
 class DailyBasic(Base):
     __tablename__ = "daily_basic"
     ts_code_trade_date = Column(Integer, primary_key=True)
     ts_code = Column(String, index=True, comment='TS股票代码')
-    trade_date = Column(String, index=True, comment='交易日期')
+    trade_date = Column(DateTime, index=True, comment='交易日期')
     close = Column(Float, comment='当日收盘价')
     turnover_rate = Column(Float, comment='换手率')
     turnover_rate_f = Column(Float, comment='换手率(自由流通股)')
@@ -93,7 +93,7 @@ class StockMx(Base):
     __tablename__ = "stock_mx"
     ts_code_trade_date = Column(Integer, primary_key=True)
     ts_code = Column(String, index=True, comment='TS股票代码')
-    trade_date = Column(String, index=True, comment='交易日期')
+    trade_date = Column(DateTime, index=True, comment='交易日期')
     mx_grade = Column(Integer, comment='动能评级，综合动能指标后分成4个评等，1(高)、2(中)、3(低)、4(弱)。高：周、月、季、半年趋势方向一致，整体看多；中：周、月、季、半年趋势方向不一致，但整体偏多；低：周、月、季、半年趋势方向不一致，但整体偏多；弱：周、月、季、半年趋势方向一致，整体看空')
     com_stock = Column(String, comment='行业轮动指标')
     evd_v = Column(String, comment='速度指标，衡量该个股股价变化的速度')
@@ -104,7 +104,7 @@ class StockVx(Base):
     __tablename__ = "stock_vx"
     ts_code_trade_date = Column(Integer, primary_key=True)
     ts_code = Column(String, index=True, comment='TS股票代码')
-    trade_date = Column(String, index=True, comment='交易日期')
+    trade_date = Column(DateTime, index=True, comment='交易日期')
     level1 = Column(String, index=True, comment='4评级：1(便宜)、2(合理)、3(贵)、4(很贵)')
     level2 = Column(String, index=True, comment='8评级：1,2(便宜)、3,4(合理)、5,6(贵)、7,8(很贵)')
     vx_life_v_l4 = Column(String, index=True, comment='估值长优4条线，根据level1的评级，公司上市后每一天的估值评级平均')
@@ -125,7 +125,7 @@ class StkHoldertrade(Base):
     __tablename__ = "stk_holdertrade"
     ts_code_ann_date = Column(Integer, primary_key=True)
     ts_code = Column(String, index=True, comment='TS股票代码')
-    ann_date = Column(String, index=True, comment='公告日期')
+    ann_date = Column(DateTime, index=True, comment='公告日期')
     holder_name = Column(String, index=True, comment='股东名称')
     holder_type = Column(String, comment='股东类型G高管P个人C公司')
     in_de = Column(String, comment='类型IN增持DE减持')
@@ -142,7 +142,7 @@ class StkFactor(Base):
     __tablename__ = "stk_factor"
     ts_code_trade_date = Column(Integer, primary_key=True)
     ts_code = Column(String, index=True, comment='TS股票代码')
-    trade_date = Column(String, index=True, comment='交易日期')
+    trade_date = Column(DateTime, index=True, comment='交易日期')
     close = Column(Float, comment='收盘价')
     open = Column(Float, comment='开盘价')
     high = Column(Float, comment='最高价')

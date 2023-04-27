@@ -1,7 +1,7 @@
 """
 数据库的模型，模型使用sqlalchemy的ORM方法，面向对象的关系映射。
 """
-from models import *  # 导入所有table model
+from models.table_models import *  # 导入所有table model
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import create_engine
 from config import SQLITE_URI
@@ -13,5 +13,5 @@ Session = sessionmaker(bind=engine)  # 这里一定要用上下文去管理sessi
 session = scoped_session(Session)    # 创建数据库链接池，直接使用session即可为当前线程拿出一个链接对象conn
                                      # 内部会采用threading.local进行隔离
 
-# Base.metadata.drop_all(engine)     # 删除表
+Base.metadata.drop_all(engine)     # 删除表
 Base.metadata.create_all(engine)     # 创建表

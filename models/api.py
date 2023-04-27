@@ -53,11 +53,13 @@ class DataApi:
         df = pd.DataFrame(data)
         return df
 
+
+
 data_api = DataApi()
 
 if __name__ == '__main__':
     pass
-    from models import *
+    from models.table_models import *
     # 1.增加数据
     df = pd.DataFrame([['SSE', '20230415', 1, '20230414'],
                        ['SSE', '20230414', 1, '20230413']],

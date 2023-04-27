@@ -1,6 +1,4 @@
-from config import tushare_api
 from models import *
-from models.api import *
 import pandas as pd
 import datetime, time
 

@@ -3,6 +3,7 @@ import pull_tushare
 import datetime
 
 def manual_start():
+    """ 手动更新所有tushare数据（非定时任务）"""
     pass
     # 1.年度日历
     tushare_api_year_list = [TradeCalTushare]

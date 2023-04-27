@@ -33,7 +33,7 @@ class FxDaily(Base):
     __tablename__ = "fx_daily"
     ts_code_trade_date = Column(String, primary_key=True)
     ts_code = Column(String, comment='外汇代码')
-    trade_date = Column(String, index=True, comment='交易日期')
+    trade_date = Column(DateTime, index=True, comment='交易日期')
     bid_open = Column(Float,  comment='买入开盘价')
     bid_close = Column(Float,  comment='买入收盘价')
     bid_high = Column(Float,  comment='买入最高价')

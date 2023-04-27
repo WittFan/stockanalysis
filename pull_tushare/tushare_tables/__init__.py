@@ -1,2 +1,2 @@
-from pull_tushare.tushare_tables.exchange_info_tushare import *
+from pull_tushare.tushare_tables.TradeCalTushare import *
 

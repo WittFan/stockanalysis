@@ -81,7 +81,7 @@ class IndexMember(Base):
     index_name = Column(String, comment='指数名称')
     con_code = Column(String, comment='成分股票代码')
     con_name = Column(String, comment='成分股票名称')
-    in_date = Column(String, comment='纳入日期')
-    out_date = Column(String, comment='剔除日期')
+    in_date = Column(DateTime, comment='纳入日期')
+    out_date = Column(DateTime, comment='剔除日期')
     is_new = Column(String, index=True, comment='是否最新Y是N否')
 
