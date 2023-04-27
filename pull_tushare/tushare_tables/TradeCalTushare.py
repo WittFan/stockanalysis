@@ -56,5 +56,6 @@ class TradeCalTushare:
             print(f'{self.to_table.__tablename__}日历已经更新到{date}, 不需要再更新')
 
 
+
 if __name__ == "__main__":
     TradeCalTushare().pull()
