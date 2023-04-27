@@ -10,7 +10,7 @@ def manual_start():
     for tushare_api_object in tushare_api_year_list:
         tushare_api_object().pull()
 
-    # 2.月行情
+    # 2.月行情: 股票月行情、复权行情，指数基本信息、“成分和权重”、申万行业分类、月行情，
     month_list = []
     # 建立一个线程池，遍历month_list
     # 设置pull条件

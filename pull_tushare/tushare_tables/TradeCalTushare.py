@@ -30,15 +30,53 @@ class TradeCalTushare:
         df['cal_date'] = df.apply(lambda x: to_datetime(x['cal_date']), axis=1)
         df['pretrade_date'] = df.apply(lambda x: to_datetime(x['pretrade_date']), axis=1)
         df['exchange_cal_date'] = df.apply(lambda x: x['exchange'] + str(x['cal_date']), axis=1)
-        print(df)
-        delete_magic = delete(TradeCal)
-        data_api.delete_data(delete_magic)
-        print('删除trade_cal')
+        data_api.delete_data(delete(TradeCal))
+        data_api.delete_data(delete(TradeWeek))
+        data_api.delete_data(delete(TradeMonth))
+        print('删除trade_cal、trade_week、trade_month')
         try:
             data_api.write(df, TradeCal)
             print('trade_cal下载成功')
+            self.write_TradeWeek()
+            self.write_TradeMonth()
         except sqlite3.IntegrityError:
             print('trade_cal已经存在或%s' % sqlite3.IntegrityError)
+
+    def write_TradeWeek(self):
+        # 交易日历上每周最后一个交易日
+        # SSE开始于19901219 SZSE开始于19910703，因此只需要SSE。返回的交易日历仅仅是从开始时间到今年最后一天，扣除节假日。
+        trade_cal = pd.DataFrame(data_api.query(session.query(TradeCal).filter(TradeCal.exchange=='SSE').filter(TradeCal.is_open=='1'))['cal_date'][::-1])
+        trade_cal['week_info'] = trade_cal.apply(lambda x: x['cal_date'].date().isocalendar(), axis=1)
+        trade_cal['year'] = trade_cal.apply(lambda x: x['week_info'][0], axis=1)
+        trade_cal['week'] = trade_cal.apply(lambda x: x['week_info'][1], axis=1)
+        trade_cal['day'] = trade_cal.apply(lambda x: x['week_info'][2], axis=1)
+        df = trade_cal.groupby(['year', 'week']).apply(lambda x: x[x['day'] == x['day'].max()])
+        df['pretrade_date'] = df['cal_date'].shift()
+        df['exchange'] = 'SSE'
+        df = df.drop(columns=['week_info', 'year', 'week', 'day'])
+        try:
+            data_api.write(df, TradeWeek)
+            print('trade_week下载成功')
+        except sqlite3.IntegrityError:
+            print('trade_week已经存在或%s' % sqlite3.IntegrityError)
+
+    def write_TradeMonth(self):
+        # 交易日历上每周最后一个交易日
+        # SSE开始于19901219 SZSE开始于19910703，因此只需要SSE。返回的交易日历仅仅是从开始时间到今年最后一天，扣除节假日。
+        trade_cal = pd.DataFrame(data_api.query(session.query(TradeCal).filter(TradeCal.exchange=='SSE').filter(TradeCal.is_open=='1'))['cal_date'][::-1])
+        trade_cal['month_info'] = trade_cal.apply(lambda x: x['cal_date'].date(), axis=1)
+        trade_cal['year'] = trade_cal.apply(lambda x: x['month_info'].year, axis=1)
+        trade_cal['month'] = trade_cal.apply(lambda x: x['month_info'].month, axis=1)
+        trade_cal['day'] = trade_cal.apply(lambda x: x['month_info'].day, axis=1)
+        df = trade_cal.groupby(['year', 'month']).apply(lambda x: x[x['day'] == x['day'].max()])
+        df['pretrade_date'] = df['cal_date'].shift()
+        df['exchange'] = 'SSE'
+        df = df.drop(columns=['month_info', 'year', 'month', 'day'])
+        try:
+            data_api.write(df, TradeMonth)
+            print('trade_month下载成功')
+        except sqlite3.IntegrityError:
+            print('trade_month已经存在或%s' % sqlite3.IntegrityError)
 
     def pull(self):
         # 取下日历日期最后一天，上次更新到n年12月30日
@@ -56,6 +94,5 @@ class TradeCalTushare:
             print(f'{self.to_table.__tablename__}日历已经更新到{date}, 不需要再更新')
 
 
-
 if __name__ == "__main__":
-    TradeCalTushare().pull()
+    TradeCalTushare().down_write()

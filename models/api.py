@@ -17,7 +17,6 @@ class DataApi:
         :param table_name:
         :return:
         """
-        print(table_model.__tablename__)
         dataframe.to_sql(table_model.__tablename__, engine, if_exists='append', index=False)
 
     @staticmethod

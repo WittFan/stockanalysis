@@ -336,22 +336,6 @@ class PullMetaData:
         except sqlite3.IntegrityError:
             print('stock_basic已经存在或%s' %sqlite3.IntegrityError)
 
-    def pull_trade_cal_all(self):
-        """2.交易日历trade_cal"""
-        # 交易所SSE上交所, SZSE深交所, CFFEX中金所, SHFE上期所, CZCE郑商所, DCE大商所, INE上能源
-        df = pd.DataFrame()
-        for i in ['SSE', 'SZSE', 'CFFEX', 'SHFE', 'CZCE', 'DCE', 'INE']:
-            df2 = self.pro.trade_cal(exchange=i)
-            df = pd.concat([df, df2], axis=0)
-        df['exchange_cal_date'] = df.apply(lambda x: x['exchange'] + str(x['cal_date']), axis=1)
-        delete_table('trade_cal')
-        print('删除trade_cal')
-        try:
-            sqlite_data.write(df, 'trade_cal')
-            print('trade_cal下载成功')
-        except sqlite3.IntegrityError:
-            print('trade_cal已经存在或%s' %sqlite3.IntegrityError)
-
     def pull_namechange_all(self):
         """3.股票曾用名namechange"""
         df = self.pro.namechange()
