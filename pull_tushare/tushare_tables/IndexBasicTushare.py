@@ -107,4 +107,4 @@ class IndexBasicTushare:
 
 
 if __name__ == "__main__":
-    TradeCalTushare().down_write()
+    IndexBasicTushare().down_write()
