@@ -25,17 +25,17 @@ class IndexBasic(Base):
     category = Column(String, index=True, comment='指数类别')
     base_date = Column(String, comment='基期')
     base_point = Column(Float, comment='基点')
-    list_date = Column(String, comment='发布日期')
+    list_date = Column(DateTime, comment='发布日期')
     weight_rule = Column(String, comment='加权方式')
     desc = Column(String, comment='描述')
-    exp_date = Column(String, comment='终止日期')
+    exp_date = Column(DateTime, comment='终止日期')
 
 
 class IndexDaily(Base):
     __tablename__ = "index_daily"
     ts_code_trade_date = Column(String, primary_key=True)
     ts_code = Column(String, index=True, comment='None')
-    trade_date = Column(String, index=True, comment='None')
+    trade_date = Column(DateTime, index=True, comment='None')
     close = Column(Float, comment='None')
     open = Column(Float, comment='None')
     high = Column(Float, comment='None')
@@ -50,7 +50,7 @@ class IndexDailybasic(Base):
     __tablename__ = "index_dailybasic"
     ts_code_trade_date = Column(String, primary_key=True)
     ts_code = Column(String, index=True, comment='TS代码')
-    trade_date = Column(String, index=True, comment='交易日期')
+    trade_date = Column(DateTime, index=True, comment='交易日期')
     total_mv = Column(Float, comment='当日总市值')
     float_mv = Column(Float, comment='当日流通市值')
     total_share = Column(Float, comment='当日总股本')

@@ -84,6 +84,7 @@ class TradeCalTushare:
         df = data_api.query(query_magic)
         if len(df)==0:
             self.down_write()
+            return
         else:
             date = df['cal_date'][0]
         # 是否过了n年11月31，如果过了每天尝试更新下一年（n = 日历最后一天的年份）

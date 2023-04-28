@@ -16,11 +16,11 @@ from sqlalchemy import (
 )
 
 class UpdateRecord(Base):
-    """交易日历表"""
+    """ 数据记录表 """
     __tablename__ = "update_record"
     id = Column(Integer, primary_key=True, autoincrement=True)
     table = Column(String, index=True, comment='更新的表')
-    datetime = Column(DateTime, index=True, comment='表内数据时间')
+    data_datetime = Column(DateTime, index=True, comment='表内数据时间')
     created_datetime = Column(DateTime, index=True, comment='更新时间')
 
 class VerifyRecord(Base):

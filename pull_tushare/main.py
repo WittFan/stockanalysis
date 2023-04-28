@@ -6,18 +6,17 @@ def manual_start():
     """ 手动更新所有tushare数据（非定时任务）"""
     pass
     ###### 一、基础信息更新
-    # 1.更新频率：年
-    # 年度日历
-    tushare_api_yearly_basics = [TradeCalTushare]
+    print(' 1.更新频率：年')
+    tushare_api_yearly_basics = [TradeCalTushare] # 年度日历
     for tushare_api_object in tushare_api_yearly_basics:
         tushare_api_object().pull()
 
-    # 2.更新频率：月
-    # 指数基本信息、“成分和权重”、申万行业分类
-    # 设置pull条件：1、取下列表的数据日期，上次更新到n月。2、是否过了n+1月最后一个交易日，如果过了就更新到最新n月
+    print(' 2.更新频率：月')
     tushare_api_monthly_basics = [IndexBasicTushare]
+    # 指数基本信息、“成分和权重”、申万行业分类
     for tushare_api_object in tushare_api_monthly_basics:
         tushare_api_object().pull()
+        # 设置pull条件：1、取下列表的数据日期，上次更新到n月。2、是否过了n+1月最后一个交易日，如果过了就更新到最新n月
 
     # 3.更新频率：周
     # 周线行情
