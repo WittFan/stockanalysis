@@ -18,6 +18,6 @@ else:
     pass
     # print(f"未知系统：{platform.system().lower()}")
 
-tushare_token = '69646548114e418501019d5b9519750fdb63b6d587b4eb250cde82f9'
+tushare_token = '*****65481***********************************'
 ts.set_token(tushare_token)
 tushare_api = ts.pro_api()

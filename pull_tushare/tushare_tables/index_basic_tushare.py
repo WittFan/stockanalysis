@@ -6,6 +6,10 @@ from config import tushare_api
 from models.table_models import *
 from models.api import *
 
+# 任务：
+# 1.重构类，建构基本信息下载的基类
+# 2.解决tushare一次下载8000的限制
+# 3.重写trade_cal
 
 class IndexBasicTushare:
     def __init__(self):
