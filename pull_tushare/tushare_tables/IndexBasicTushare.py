@@ -7,7 +7,7 @@ from models.table_models import *
 from models.api import *
 
 
-class TradeCalTushare:
+class IndexBasicTushare:
     def __init__(self):
         self.from_api = tushare_api.trade_cal
         self.to_table = TradeCal
@@ -19,8 +19,7 @@ class TradeCalTushare:
         for i in ['SSE', 'SZSE', 'CFFEX', 'SHFE', 'CZCE', 'DCE', 'INE']:
             df2 = tushare_api.trade_cal(exchange=i)
             df = pd.concat([df, df2], axis=0)
-        if len(df)==0:
-            print(f'{self.to_table.__tablename__}日历下载失败')
+        print(df)
         def to_datetime(x):
             try:
                 x = pendulum.parse(x)
@@ -92,6 +91,19 @@ class TradeCalTushare:
             self.down_write()
         else:
             print(f'{self.to_table.__tablename__}日历已经更新到{date}, 不需要再更新')
+
+    def pull_index_basic_all(self):
+        """6.指数基本信息index_basic"""
+        df = self.pro.index_basic(fields=["ts_code", "name", "fullname", "market", "publisher", "index_type", "category",
+                                     "base_date", "base_point", "list_date", "weight_rule", "desc", "exp_date"])
+        from sqlite_data import delete_table
+        delete_table('index_basic')
+        print('删除index_basic')
+        try:
+            sqlite_data.write(df, 'index_basic')
+            print('index_basic下载成功')
+        except sqlite3.IntegrityError:
+            print('index_basic已经存在或%s' % sqlite3.IntegrityError)
 
 
 if __name__ == "__main__":

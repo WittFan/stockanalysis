@@ -2,6 +2,9 @@ from config import SQLITE_URI
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import create_engine, text, delete
 import pandas as pd
+from functools import partial
+import pendulum
+from models import table_models
 
 engine = create_engine(SQLITE_URI, echo=False)  # 操作数据句柄
 Session = sessionmaker(bind=engine)  # 这里一定要用上下文去管理session,否则会出现很多诡异的情况！！！切记
@@ -52,43 +55,88 @@ class DataApi:
         df = pd.DataFrame(data)
         return df
 
+    def __getattr__(self, table_name):
+        """
+        DataApi.name ， name为表名
+        使用：
+        data_api = DataApi()
+        data_api.index_dailybasic('000001.SH', '20040101', '20230101')
+        :param name:
+        :return:
+        """
+        return partial(self.read, table_name)
 
+    def read(self, table_name, **kwargs):
+        # 构造 SQL 查询语句
+        # 输出的字段fields
+        table_model = getattr(table_models, table_name)
+        try:
+            fields = kwargs['fields']
+            model_fields = []
+            for i in fields:
+                model_fields.append(getattr(table_model, i))
+            query_magic = session.query(*model_fields)
+        except:
+            query_magic = session.query(table_model)
+        # 查询的字段
+        for key, value in kwargs.items():
+            if key == 'fields':  # 因为前面对fields进行了处理
+                continue
+            elif key == 'start_date':
+                query_magic = getattr(query_magic, 'filter')
+                query_magic = query_magic(getattr(table_model, 'trade_date') >= value)
+            elif key == 'end_date':
+                query_magic = getattr(query_magic, 'filter')
+                query_magic = query_magic(getattr(table_model, 'trade_date') <= value)
+            else:
+                query_magic = getattr(query_magic, 'filter')
+                query_magic = query_magic(getattr(table_model, key) == value)
+        df = self.query(query_magic)
+        return df
 
+# 创建实体
 data_api = DataApi()
 
 if __name__ == '__main__':
     pass
     from models.table_models import *
     # 1.增加数据
-    df = pd.DataFrame([['SSE', '20230415', 1, '20230414'],
-                       ['SSE', '20230414', 1, '20230413']],
-                      columns=['exchange', 'cal_date', 'is_open', 'pretrade_date'])
-    data_api.write(df, Test)
+    # data_list = [['SSE', pendulum.parse('20230415'), 1, pendulum.parse('20230414')],
+    #              ['SSE', pendulum.parse('20230414'), 1, pendulum.parse('20230413')]]
+    # df = pd.DataFrame(data_list, columns=['exchange', 'cal_date', 'is_open', 'pretrade_date'])
+    # data_api.write(df, Test)
 
     # 2.删除数据
-
     # 按照条件删除表数据
-    # delete_magic = delete(Test).filter(Test.cal_date=='20230415')
+    # delete_magic = delete(Test).filter(Test)
     # data_api.delete_data(delete_magic)
-
     # # 清空表
-    # session.execute(delete(Test))
+    # delete_magic = session.execute(delete(Test))
     # data_api.delete_data()
 
     # 删除表
-    data_api.delete_table(Test)
+    # data_api.delete_table(Test)
 
     # # 3.更新数据
     # update_magic = update(Test).where(Test.cal_date == "20230415").values(cal_date="王老五")
     # data_api.update(update_magic)
     #
     # 4.查询数据
-    query_magic = session.query(Test).filter(Test.id > 0).filter(Test.exchange=='SSE')
-    df = data_api.query(query_magic)
-    query_magic = session.query(TradeCal)
-    df = data_api.query(query_magic)
-    print(df)
+    # query_magic = session.query(Test.id, Test.cal_date).filter(Test.id > 0).filter(Test.exchange=='SSE')
+    # df = data_api.query(query_magic)
+    # query_magic = session.query(TradeCal)
+    # df = data_api.query(query_magic)
+    # print(df)
 
     # # 5.原生sql
     # df = data_api.sql(text('select * from test;'))
     # print(df)
+
+    # 6.dot表名查询
+    from datetime import datetime
+    start_time = datetime.now()
+    df = data_api.TradeCal(fields=['id', 'cal_date'], start_date=pendulum.parse('20230118'), end_date=pendulum.parse('20230401'))
+    time_spend = datetime.now() - start_time
+    print(df)
+    print(time_spend)
+
