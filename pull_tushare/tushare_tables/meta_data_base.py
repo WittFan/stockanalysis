@@ -16,20 +16,20 @@ class MetaDataBase:
         self.to_table = IndexBasic
         self.fields = ["ts_code", "name", "fullname", "market", "publisher", "index_type", "category",
                     "base_date", "base_point", "list_date", "weight_rule", "desc", "exp_date"]
+        self.to_datetime_list = ['list_date', 'exp_date']
+        self.frequency = 'monthly'
 
     def down(self):
         """ 下载数据 """
-        try:
-            df_table = self.from_api(fields=self.fields)
-        except Exception as e:
-            df_table = None
-            print(f'在下载表{self.to_table.__tablename__}时报错', e)
+        df_table = self.from_api(fields=self.fields)
+        if len(df_table)==0:
+            print(f'{self.to_table.__tablename__}下载失败')
         return df_table
 
-    def process(self, df_table):
+    def process(self, df_table, to_datetime_list):
         """  处理数据  """
-        df_table['list_date'] = df_table.apply(lambda x: to_datetime(x['list_date']), axis=1)
-        df_table['exp_date'] = df_table.apply(lambda x: to_datetime(x['exp_date']), axis=1)
+        for column_name in to_datetime_list:
+            df_table[column_name] = df_table.apply(lambda x: to_datetime(x[column_name]), axis=1)
         return df_table
 
     def write(self, df_table):
@@ -39,7 +39,7 @@ class MetaDataBase:
         print(f'删除{self.to_table.__tablename__}')
         try:
             data_api.write(df_table, self.to_table)
-            print(f'{self.to_table.__tablename__}下载成功')
+            print(f'{self.to_table.__tablename__}写入成功')
         except sqlite3.IntegrityError:
             print(f'{self.to_table.__tablename__}已经存在或{sqlite3.IntegrityError}')
 
@@ -60,9 +60,11 @@ class MetaDataBase:
         else:
             date = df_table['data_datetime'][0]
         # 是否过了n+1月25，如果过了每天尝试更新n+1月
-        if today > datetime.datetime(year=date.year, month=date.month+1, day=25):
+        dates = {'yearly': datetime.datetime(year=date.year, month=11, day=25),
+                 'monthly': datetime.datetime(year=date.year, month=date.month+1, day=25),}
+        if today > dates[self.frequency]:
             df_table = self.down()       # 下载数据
-            df_table = self.process(df_table)  # 处理数据
+            df_table = self.process(df_table, self.to_datetime_list)  # 处理数据
             self.write(df_table)         # 写入数据
             self.record(today)     # 记录更新
         else:
@@ -70,4 +72,4 @@ class MetaDataBase:
 
 
 if __name__ == "__main__":
-    IndexBasicTushare().pull()
+    MetaDataBase().pull()

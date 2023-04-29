@@ -58,18 +58,6 @@ class PullMetaData:
         except sqlite3.IntegrityError:
             print('stock_company已经存在或%s' % sqlite3.IntegrityError)
 
-    def pull_index_basic_all(self):
-        """6.指数基本信息index_basic"""
-        df = self.pro.index_basic(fields=["ts_code", "name", "fullname", "market", "publisher", "index_type", "category",
-                                     "base_date", "base_point", "list_date", "weight_rule", "desc", "exp_date"])
-        from sqlite_data import delete_table
-        delete_table('index_basic')
-        print('删除index_basic')
-        try:
-            sqlite_data.write(df, 'index_basic')
-            print('index_basic下载成功')
-        except sqlite3.IntegrityError:
-            print('index_basic已经存在或%s' % sqlite3.IntegrityError)
 
     def pull_index_classify_all(self):
         """15.申万行业分类index_classify"""
@@ -165,12 +153,9 @@ class PullMetaData:
         tushare所有全量数据拉取到本地并存储，基本信息部分
         :return:
         """
-        self.pull_stock_basic_all()
-        self.pull_trade_cal_all()
         self.pull_namechange_all()
         self.pull_hs_const_all()
         self.pull_stock_company_all()
-        self.pull_index_basic_all()
         self.pull_index_classify_all()
         self.pull_fx_obasic_all()
         self.pull_index_member_all()
