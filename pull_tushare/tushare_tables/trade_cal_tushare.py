@@ -11,6 +11,7 @@ class TradeCalTushare:
     def __init__(self):
         self.from_api = tushare_api.trade_cal
         self.to_table = TradeCal
+        self.fields = None
 
     def down_write(self):
         """2.交易日历trade_cal"""
