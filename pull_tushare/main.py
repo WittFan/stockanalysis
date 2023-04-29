@@ -6,12 +6,12 @@ def manual_start():
     """ 手动更新所有tushare数据（非定时任务）"""
     pass
     ###### 一、基础信息更新
-    print(' 1.更新频率：年')
+    print(' 1.基础信息更新频率：年')
     tushare_api_yearly_basics = [TradeCalTushare] # 年度日历
     for tushare_api_object in tushare_api_yearly_basics:
         tushare_api_object().pull()
 
-    print(' 2.更新频率：月')
+    print(' 2.基础信息更新频率：月')
     tushare_api_monthly_basics = [IndexBasicTushare, StockBasicTushare]
     # 指数基本信息、“成分和权重”、申万行业分类
     for tushare_api_object in tushare_api_monthly_basics:
@@ -38,10 +38,11 @@ def manual_start():
 if __name__=="__main__":
     # 下一步工作：
     # 任务：
-    # 2.解决index_basic_tushare一次下载8000的限制
-
-    # 1.tushare明细数据下载使用多线程任务
-    # 2.加上更新条件判断，加上日志
-    # 3.使用说明，包括在数据库注册表，写下载数据的类，加入更新判断条件
+    # 1.下载daily、daily_basic、申万行业分类、申万行业成分
+    # 2.tushare明细数据下载使用多线程任务
+    # 3.加上更新条件判断，加上日志
+    # 4.使用说明，包括在数据库注册表，写下载数据的类，加入更新判断条件
     # 上面完成，数据部分就结束了
+    # 5.模拟大数投资策略
+    # 2.解决index_basic_tushare一次下载8000的限制
     manual_start()
