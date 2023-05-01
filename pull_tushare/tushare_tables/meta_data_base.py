@@ -49,19 +49,27 @@ class MetaDataBase:
         df_table['created_datetime'] = today
         data_api.write(df_table, UpdateRecord)
 
-    def pull(self):
+    def get_last_date(self):
         # 取下更细记录上数据标记日期，上次更新到n月2m日。
         query_magic = session.query(UpdateRecord.data_datetime).filter(UpdateRecord.table==self.to_table.__tablename__).limit(1)
         df_table = data_api.query(query_magic)
+        if len(df_table) == 0:
+            last_date = datetime.datetime(year=1990, month=1, day=1)
+        else:
+            last_date = df_table['data_datetime'][0]
+        return last_date
+
+    def pull(self):
+        last_date = self.get_last_date()
+        # date是n年m月l日，全年第k周
+        # yearly:  是否过了n年11月30，如果过了每次尝试更新下一年（n = 日历最后一天的年份）
+        # monthly: 是否过了m+1月25，如果过了每天尝试更新m+1月
+        # weekly:  是否过了第k+1周周五，如果过了每天尝试更新k+1周
+        # dayly:   每天更新
+        dates = {'yearly': datetime.datetime(year=last_date.year, month=11, day=25),
+                 'monthly': datetime.datetime(year=last_date.year, month=last_date.month+1, day=25),}
         # 记录现在时间 2023-04-29 10:15:59.517954
         today = datetime.datetime.today()
-        if len(df_table) == 0:
-            date = datetime.datetime(year=1990, month=1, day=1)
-        else:
-            date = df_table['data_datetime'][0]
-        # 是否过了n+1月25，如果过了每天尝试更新n+1月
-        dates = {'yearly': datetime.datetime(year=date.year, month=11, day=25),
-                 'monthly': datetime.datetime(year=date.year, month=date.month+1, day=25),}
         if today > dates[self.frequency]:
             df_table = self.down()       # 下载数据
             df_table = self.process(df_table, self.to_datetime_list)  # 处理数据
