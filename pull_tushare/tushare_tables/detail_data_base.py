@@ -2,7 +2,7 @@
 import sqlite3
 import datetime
 import time
-from sqlalchemy import desc
+from sqlalchemy import desc, asc
 
 from config import tushare_api
 from models.table_models import *
@@ -66,13 +66,12 @@ class DetailDataBase:
                 return end_date
             else:
                 end_date = end_date - datetime.timedelta(days=1)
-                # print(end_date)
 
     def get_record_cal(self):
         # 股票的交易日历
         # SSE开始于19901219 SZSE开始于19910703，因此只需要SSE。返回的交易日历仅仅是从开始时间到今年最后一天，扣除节假日。
-        query_magic = session.query(TradeCal).filter(TradeCal.exchange=='SSE').filter(TradeCal.is_open == '1')
-        trade_cal = data_api.query(query_magic)['cal_date'][::-1]
+        query_magic = session.query(TradeCal).filter(TradeCal.exchange=='SSE').filter(TradeCal.is_open == '1').order_by(asc(TradeCal.cal_date))
+        trade_cal = data_api.query(query_magic)['cal_date']
         trade_cal = list(trade_cal)
         return trade_cal
 
@@ -82,7 +81,7 @@ class DetailDataBase:
             start_date = self.record_cal[0]
             self.last_date = start_date
         else:
-            print('上一次更新到', self.last_date)
+            print(f'{self.to_table.__tablename__}上一次更新到', self.last_date)
             start_date = self.record_cal[self.record_cal.index(self.last_date)+1]  # 在数据库的最后一个日期再往后移动一天
         # 计算需要更新的百分比
         update_percent = round(self.record_cal.index(self.last_date) / self.record_cal.index(self.end_date) * 100, 2)
@@ -112,13 +111,6 @@ class DetailDataBase:
         df = df.drop_duplicates('ts_code_trade_date')
         return df
 
-    # def record(self, date):
-    #     # 标记更新日期到update_record上
-    #     df_table = pd.DataFrame([[date]], columns=['data_datetime'])
-    #     df_table['table_name'] = self.to_table.__tablename__
-    #     df_table['created_datetime'] = self.today
-    #     data_api.write(df_table, UpdateRecord)
-
     def process_data(self, df, date):
         # 判断date日期下是否有数据，有数据则添加primary key，添加更新记录
         if len(df) > 0:
@@ -129,14 +121,6 @@ class DetailDataBase:
             df = self.set_primary_key(df)
             # print(f'表{self.to_table.__tablename__}，日期{date}，下载处理数据成功，数据长度{len(df)}')
         return df
-
-    # def write_data(self, df, date):
-    #     # 将下载的数据插入数据库
-    #     try:
-    #         data_api.write(df, self.to_table)
-    #         # print(f'{self.to_table.__tablename__}写入成功，日期{date}，数据长度{len(df)}')
-    #     except sqlite3.IntegrityError:
-    #         print('表{table_name}已经存在或%s' % sqlite3.IntegrityError)
 
     def update_data(self):
         percent = 2
@@ -167,7 +151,6 @@ class DetailDataBase:
         # 判断更新日期是不是到了日历最新
         self.record_cal = self.get_record_cal()              # 数据记录日历
         self.end_date = self.get_end_date()                  # 依据today，向前取日历结束日期
-        print(self.end_date)
         if self.last_date == self.end_date:                  # 如果记录日期更新到日历结束日期，停止；否则继续
             print(f'表{self.to_table.__tablename__}已更新到最近的日期{self.end_date}')
             return

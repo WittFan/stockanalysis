@@ -21,3 +21,11 @@ else:
 tushare_token = '*****65481***********************************'
 ts.set_token(tushare_token)
 tushare_api = ts.pro_api()
+
+cpu_count = 4
+# 获取系统cpu核心数
+# cpu_count = os.cpu_count()
+
+
+if __name__=="__main__":
+    pass
