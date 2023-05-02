@@ -16,7 +16,7 @@ from sqlalchemy import (
 
 class TushareStkRewards(Base):
     __tablename__ = "tushare_stk_rewards"
-    ts_code_ann_date = Column(Integer, primary_key=True)
+    ts_code_ann_date = Column(String, primary_key=True)
     ts_code = Column(String, index=True, comment='TS股票代码')
     ann_date = Column(DateTime, comment='公告日期')
     end_date = Column(DateTime, index=True, comment='报告期')

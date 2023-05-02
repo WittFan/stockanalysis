@@ -76,7 +76,7 @@ class IndexClassify(Base):
 class IndexMember(Base):
     """申万行业成分构成index_member"""
     __tablename__ = "index_member"
-    index_code_con_code = Column(Integer, primary_key=True, comment='指数代码+成分股票代码')
+    index_code_con_code = Column(String, primary_key=True, comment='指数代码+成分股票代码')
     index_code = Column(String, index=True, comment='指数代码')
     index_name = Column(String, comment='指数名称')
     con_code = Column(String, comment='成分股票代码')

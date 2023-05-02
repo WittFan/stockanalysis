@@ -16,7 +16,7 @@ from sqlalchemy import (
 
 class Daily(Base):
     __tablename__ = "daily"
-    ts_code_trade_date = Column(Integer, primary_key=True)
+    ts_code_trade_date = Column(String, primary_key=True)
     ts_code = Column(String, index=True, comment='股票代码')
     trade_date = Column(DateTime, index=True, comment='交易日期')
     open = Column(Float, comment='开盘价')
@@ -31,7 +31,7 @@ class Daily(Base):
 
 class Weekly(Base):
     __tablename__ = "weekly"
-    ts_code_trade_date = Column(Integer, primary_key=True)
+    ts_code_trade_date = Column(String, primary_key=True)
     ts_code = Column(String, index=True, comment='')
     trade_date = Column(DateTime, index=True, comment='')
     close = Column(Float, comment='')
@@ -46,7 +46,7 @@ class Weekly(Base):
 
 class Monthly(Base):
     __tablename__ = "monthly"
-    ts_code_trade_date = Column(Integer, primary_key=True)
+    ts_code_trade_date = Column(String, primary_key=True)
     ts_code = Column(String, index=True, comment='')
     trade_date = Column(DateTime, index=True, comment='')
     close = Column(Float, comment='')
@@ -61,14 +61,14 @@ class Monthly(Base):
 
 class AdjFactor(Base):
     __tablename__ = "adj_factor"
-    ts_code_trade_date = Column(Integer, primary_key=True)
+    ts_code_trade_date = Column(String, primary_key=True)
     ts_code = Column(String, index=True, comment='股票代码')
     trade_date = Column(DateTime, index=True, comment='交易日期')
     adj_factor = Column(Float, comment='复权因子')
 
 class DailyBasic(Base):
     __tablename__ = "daily_basic"
-    ts_code_trade_date = Column(Integer, primary_key=True)
+    ts_code_trade_date = Column(String, primary_key=True)
     ts_code = Column(String, index=True, comment='TS股票代码')
     trade_date = Column(DateTime, index=True, comment='交易日期')
     close = Column(Float, comment='当日收盘价')
@@ -91,7 +91,7 @@ class DailyBasic(Base):
 
 class StockMx(Base):
     __tablename__ = "stock_mx"
-    ts_code_trade_date = Column(Integer, primary_key=True)
+    ts_code_trade_date = Column(String, primary_key=True)
     ts_code = Column(String, index=True, comment='TS股票代码')
     trade_date = Column(DateTime, index=True, comment='交易日期')
     mx_grade = Column(Integer, comment='动能评级，综合动能指标后分成4个评等，1(高)、2(中)、3(低)、4(弱)。高：周、月、季、半年趋势方向一致，整体看多；中：周、月、季、半年趋势方向不一致，但整体偏多；低：周、月、季、半年趋势方向不一致，但整体偏多；弱：周、月、季、半年趋势方向一致，整体看空')
@@ -102,7 +102,7 @@ class StockMx(Base):
 
 class StockVx(Base):
     __tablename__ = "stock_vx"
-    ts_code_trade_date = Column(Integer, primary_key=True)
+    ts_code_trade_date = Column(String, primary_key=True)
     ts_code = Column(String, index=True, comment='TS股票代码')
     trade_date = Column(DateTime, index=True, comment='交易日期')
     level1 = Column(String, index=True, comment='4评级：1(便宜)、2(合理)、3(贵)、4(很贵)')
@@ -123,7 +123,7 @@ class StockVx(Base):
 
 class StkHoldertrade(Base):
     __tablename__ = "stk_holdertrade"
-    ts_code_ann_date = Column(Integer, primary_key=True)
+    ts_code_ann_date = Column(String, primary_key=True)
     ts_code = Column(String, index=True, comment='TS股票代码')
     ann_date = Column(DateTime, index=True, comment='公告日期')
     holder_name = Column(String, index=True, comment='股东名称')
@@ -140,7 +140,7 @@ class StkHoldertrade(Base):
 
 class StkFactor(Base):
     __tablename__ = "stk_factor"
-    ts_code_trade_date = Column(Integer, primary_key=True)
+    ts_code_trade_date = Column(String, primary_key=True)
     ts_code = Column(String, index=True, comment='TS股票代码')
     trade_date = Column(DateTime, index=True, comment='交易日期')
     close = Column(Float, comment='收盘价')

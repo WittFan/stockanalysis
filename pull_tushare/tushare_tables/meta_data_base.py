@@ -1,6 +1,7 @@
 """  基础数据下载到本地的基类  """
 import sqlite3
 import datetime
+from sqlalchemy import desc
 
 from config import tushare_api
 from models.table_models import *
@@ -19,6 +20,33 @@ class MetaDataBase:
         self.to_datetime_list = ['list_date', 'exp_date']
         self.frequency = 'monthly'
 
+    def get_frequency_date(self):
+        # date是n年m月l日，全年第k周
+        # yearly:  是否过了n年11月30，如果过了每次尝试更新下一年（n = 日历最后一天的年份）
+        # monthly: 是否过了m+1月25，如果过了每天尝试更新m+1月
+        # weekly:  是否过了第k+1周周五，如果过了每天尝试更新k+1周
+        # dayly:   每天更新
+        # 是否过了n+1月25，如果过了每天尝试更新n+1月
+        if self.last_date == None:
+            return datetime.datetime(year=1990, month=1, day=1)
+        if self.frequency == 'yearly':
+            return datetime.datetime(year=self.last_date.year, month=11, day=25)
+        elif self.frequency == 'monthly':
+            if self.last_date.month == 12:
+                next_month = 1
+            else:
+                next_month = self.last_date.month+1
+            return datetime.datetime(year=self.last_date.year, month=next_month, day=25)
+        elif self.frequency == 'weekly':
+            day = self.last_date.isocalendar()[2] # 周几
+            if day >= 5:
+                day_number = 5 - day + 7
+            else:
+                day_number = 5 - day
+            return self.last_date + datetime.timedelta(days=day_number)
+        elif self.frequency == 'dayly':
+            return self.last_date
+
     def down(self):
         """ 下载数据 """
         df_table = self.from_api(fields=self.fields)
@@ -26,9 +54,9 @@ class MetaDataBase:
             print(f'{self.to_table.__tablename__}下载失败')
         return df_table
 
-    def process(self, df_table, to_datetime_list):
+    def process(self, df_table):
         """  处理数据  """
-        for column_name in to_datetime_list:
+        for column_name in self.to_datetime_list:
             df_table[column_name] = df_table.apply(lambda x: to_datetime(x[column_name]), axis=1)
         return df_table
 
@@ -45,13 +73,13 @@ class MetaDataBase:
 
     def record(self, today):
         df_table = pd.DataFrame([[today]], columns=['data_datetime'])
-        df_table['table'] = self.to_table.__tablename__
+        df_table['table_name'] = self.to_table.__tablename__
         df_table['created_datetime'] = today
         data_api.write(df_table, UpdateRecord)
 
     def get_last_date(self):
         # 取下更细记录上数据标记日期，上次更新到n月2m日。
-        query_magic = session.query(UpdateRecord.data_datetime).filter(UpdateRecord.table==self.to_table.__tablename__).limit(1)
+        query_magic = session.query(UpdateRecord.data_datetime).filter(UpdateRecord.table_name==self.to_table.__tablename__).order_by(desc(UpdateRecord.data_datetime)).limit(1)
         df_table = data_api.query(query_magic)
         if len(df_table) == 0:
             last_date = datetime.datetime(year=1990, month=1, day=1)
@@ -60,23 +88,21 @@ class MetaDataBase:
         return last_date
 
     def pull(self):
-        last_date = self.get_last_date()
+        self.last_date = self.get_last_date()
         # date是n年m月l日，全年第k周
         # yearly:  是否过了n年11月30，如果过了每次尝试更新下一年（n = 日历最后一天的年份）
         # monthly: 是否过了m+1月25，如果过了每天尝试更新m+1月
         # weekly:  是否过了第k+1周周五，如果过了每天尝试更新k+1周
         # dayly:   每天更新
-        dates = {'yearly': datetime.datetime(year=last_date.year, month=11, day=25),
-                 'monthly': datetime.datetime(year=last_date.year, month=last_date.month+1, day=25),}
         # 记录现在时间 2023-04-29 10:15:59.517954
         today = datetime.datetime.today()
-        if today > dates[self.frequency]:
+        if today > self.get_frequency_date():
             df_table = self.down()       # 下载数据
-            df_table = self.process(df_table, self.to_datetime_list)  # 处理数据
+            df_table = self.process(df_table)  # 处理数据
             self.write(df_table)         # 写入数据
             self.record(today)     # 记录更新
         else:
-            print(f'{self.to_table.__tablename__}已经更新到{date}, 不需要再更新')
+            print(f'{self.to_table.__tablename__}已经更新到{self.last_date}, 不需要再更新')
 
 
 if __name__ == "__main__":

@@ -86,13 +86,13 @@ class TradeCalTushare(MetaDataBase):
     def record(self, today, df_table):
         df_record = pd.DataFrame()
         df_record['data_datetime'] = df_table['cal_date']
-        df_record['table'] = self.to_table.__tablename__
+        df_record['table_name'] = self.to_table.__tablename__
         df_record['created_datetime'] = today
         data_api.write(df_record, UpdateRecord)
 
     def pull(self):
         # 取下更细记录上数据标记日期，上次更新到n年12月2m日。
-        query_magic = session.query(UpdateRecord.data_datetime).filter(UpdateRecord.table==self.to_table.__tablename__).limit(1)
+        query_magic = session.query(UpdateRecord.data_datetime).filter(UpdateRecord.table_name==self.to_table.__tablename__).limit(1)
         df_table = data_api.query(query_magic)
         # 记录现在时间 2023-04-29 10:15:59.517954
         today = datetime.datetime.today()

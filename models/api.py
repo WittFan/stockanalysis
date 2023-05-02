@@ -115,7 +115,7 @@ if __name__ == '__main__':
     # data_api.delete_data()
 
     # 删除表
-    data_api.delete_table(UpdateRecord)
+    data_api.delete_table(VerifyRecord)
 
     # # 3.更新数据
     # update_magic = update(Test).where(Test.cal_date == "20230415").values(cal_date="王老五")
@@ -133,10 +133,10 @@ if __name__ == '__main__':
     # print(df)
 
     # 6.dot表名查询
-    from datetime import datetime
-    start_time = datetime.now()
-    df = data_api.Daily(fields=['id', 'cal_date'], start_date=pendulum.parse('20230118'), end_date=pendulum.parse('20230401'))
-    time_spend = datetime.now() - start_time
-    print(df)
-    print(time_spend)
+    # from datetime import datetime
+    # start_time = datetime.now()
+    # df = data_api.Daily(fields=['id', 'cal_date'], start_date=pendulum.parse('20230118'), end_date=pendulum.parse('20230401'))
+    # time_spend = datetime.now() - start_time
+    # print(df)
+    # print(time_spend)
 

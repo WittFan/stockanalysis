@@ -15,8 +15,7 @@ def manual_start():
     tushare_api_monthly_basics = [IndexBasicTushare, StockBasicTushare]
     # 指数基本信息、“成分和权重”、申万行业分类
     for tushare_api_object in tushare_api_monthly_basics:
-        tushare_api_object().pull()
-        # 设置pull条件：1、取下列表的数据日期，上次更新到n月。2、是否过了n+1月最后一个交易日，如果过了就更新到最新n月
+        tushare_api_object().pull()   # pull条件：上次更新到n月，过了n+1月25日就每日尝试更新
 
     # 3.更新频率：周
     # 周线行情
@@ -25,21 +24,18 @@ def manual_start():
     # 设置pull条件：1、取下列表的数据日期，上次更新到第n周最后一日。2、是否过了第n+1周最后一个交易日，如果过了就更新
 
     ###### 二、明细数据更新：要建线程池
-    # 4.更新频率：月
-    # 股票月复权行情、月线行情，指数月线行情
-
-    # 5.更新频率：周
-
-    # 6.更新频率：日
-    day_list = []
-    # 更新到今天
+    # 4.更新频率：月、周、日
+    print(' 6.详细信息更新频率：日')
+    day_list = [DaylyTushare]
+    for tushare_api_object in day_list:
+        tushare_api_object().pull()  # 每日更新
 
 
 if __name__=="__main__":
     # 下一步工作：
     # 任务：
     # 1.下载daily、daily_basic、申万行业分类、申万行业成分
-    # 2.tushare明细数据下载使用多线程任务
+    # 2.在main.py，tushare明细数据下载使用多线程任务
     # 3.加上更新条件判断，加上日志
     # 4.使用说明，包括在数据库注册表，写下载数据的类，加入更新判断条件
     # 上面完成，数据部分就结束了

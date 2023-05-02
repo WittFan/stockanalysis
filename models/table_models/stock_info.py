@@ -34,7 +34,7 @@ class StockBasic(Base):
 
 class Namechange(Base):
     __tablename__ = "namechange"
-    ts_code = Column(Integer, primary_key=True, autoincrement=True, comment='TS代码')
+    ts_code = Column(String, primary_key=True, comment='TS代码')
     name = Column(String, comment='证券名称')
     start_date = Column(DateTime, index=True, comment='开始日期')
     end_date = Column(DateTime, index=True, comment='结束日期')
@@ -43,7 +43,7 @@ class Namechange(Base):
 
 class HsConst(Base):
     __tablename__ = "hs_const"
-    ts_code = Column(Integer, primary_key=True, comment='TS代码')
+    ts_code = Column(String, primary_key=True, comment='TS代码')
     hs_type = Column(String, index=True, comment='沪深港通类型SH沪SZ深')
     in_date = Column(DateTime, comment='纳入日期')
     out_date = Column(DateTime, comment='剔除日期')
@@ -51,7 +51,7 @@ class HsConst(Base):
 
 class StockCompany(Base):
     __tablename__ = "stock_company"
-    ts_code = Column(Integer, primary_key=True, comment='股票代码')
+    ts_code = Column(String, primary_key=True, comment='股票代码')
     exchange = Column(String, index=True, comment='交易所代码SSE上交所 SZSE深交所')
     chairman = Column(String, comment='法人代表')
     manager = Column(String, comment='总经理')

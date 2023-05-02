@@ -19,13 +19,14 @@ class UpdateRecord(Base):
     """ 数据记录表 """
     __tablename__ = "update_record"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    table = Column(String, index=True, comment='更新的表')
+    table_name = Column(String, index=True, comment='更新的表')
     data_datetime = Column(DateTime, index=True, comment='表内数据时间')
     created_datetime = Column(DateTime, index=True, comment='更新时间')
 
 class VerifyRecord(Base):
     __tablename__ = "verify_record"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    table = Column(String, index=True, comment='更新的表')
+    table_name = Column(String, index=True, comment='表名')
     completeness = Column(String, index=True, comment='是否完整 1完整 0不完整')
-    created_datetime = Column(DateTime, index=True, comment='更新时间')
+    data_datetime = Column(DateTime, index=True, comment='表内最近数据时间')
+    verify_datetime = Column(DateTime, index=True, comment='验证时间')

@@ -1,5 +1,6 @@
 import tushare as ts
 import pandas as pd
+import numpy as np
 import datetime, time
 import sqlite3
 import sqlite_data
@@ -336,6 +337,22 @@ class PullMetaData:
         except sqlite3.IntegrityError:
             print('stock_basic已经存在或%s' %sqlite3.IntegrityError)
 
+    def pull_trade_cal_all(self):
+        """2.交易日历trade_cal"""
+        # 交易所SSE上交所, SZSE深交所, CFFEX中金所, SHFE上期所, CZCE郑商所, DCE大商所, INE上能源
+        df = pd.DataFrame()
+        for i in ['SSE', 'SZSE', 'CFFEX', 'SHFE', 'CZCE', 'DCE', 'INE']:
+            df2 = self.pro.trade_cal(exchange=i)
+            df = pd.concat([df, df2], axis=0)
+        df['exchange_cal_date'] = df.apply(lambda x: x['exchange'] + str(x['cal_date']), axis=1)
+        delete_table('trade_cal')
+        print('删除trade_cal')
+        try:
+            sqlite_data.write(df, 'trade_cal')
+            print('trade_cal下载成功')
+        except sqlite3.IntegrityError:
+            print('trade_cal已经存在或%s' %sqlite3.IntegrityError)
+
     def pull_namechange_all(self):
         """3.股票曾用名namechange"""
         df = self.pro.namechange()
@@ -518,11 +535,11 @@ def pull_all_detail_data():
     PullStockDailyNewData('stk_factor').run()                # 股票技术因子（量化因子）ts_code、trade_date必须选择一个
 
 if __name__ == '__main__':
-    from models import data_api
-    data_api.delete_table('index_dailybasic')
+    # from sqlite_data import delete_table
+    # delete_table('index_dailybasic')
 
     # from sql_create_table import create_table
     # create_table()
     # PullMetaData().pull_all_meta_data()
-    # pull_all_detail_data()
+    pull_all_detail_data()
 
