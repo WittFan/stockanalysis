@@ -7,9 +7,8 @@ from config import tushare_api
 from models.table_models import *
 from models.api import *
 from utils import to_datetime
+from utils import LoggerTushare
 
-
-# 3.重写trade_cal
 
 class MetaDataBase:
     def __init__(self):
@@ -19,6 +18,7 @@ class MetaDataBase:
                     "base_date", "base_point", "list_date", "weight_rule", "desc", "exp_date"]
         self.to_datetime_list = ['list_date', 'exp_date']
         self.frequency = 'monthly'
+        self.logger = LoggerTushare(self.__class__.__name__).logger
 
     def get_frequency_date(self):
         # date是n年m月l日，全年第k周
@@ -51,7 +51,7 @@ class MetaDataBase:
         """ 下载数据 """
         df_table = self.from_api(fields=self.fields)
         if len(df_table)==0:
-            print(f'{self.to_table.__tablename__}下载失败')
+            self.logger.error(f'{self.to_table.__tablename__}下载失败')
         return df_table
 
     def process(self, df_table):
@@ -85,16 +85,16 @@ class MetaDataBase:
             with engine.begin() as con:
                 # 删除table
                 data_api.delete_table(self.to_table)
-                print(f'删除{self.to_table.__tablename__}')
+                self.logger.info(f'删除{self.to_table.__tablename__}')
                 df_table.to_sql(self.to_table.__tablename__, con=con, if_exists='append', index=False)  # 写入数据库
                 # 标记更新日期到update_record上
                 df_table2 = pd.DataFrame([[today]], columns=['data_datetime'])
                 df_table2['table_name'] = self.to_table.__tablename__
                 df_table2['created_datetime'] = today
                 df_table2.to_sql(UpdateRecord.__tablename__, con=con, if_exists='append', index=False) # 记录更新
-                print(f'{self.to_table.__tablename__}写入成功')
+                self.logger.info(f'{self.to_table.__tablename__}写入成功')
         else:
-            print(f'{self.to_table.__tablename__}已经更新到{self.last_date}, 不需要再更新')
+            self.logger.info(f'表{self.to_table.__tablename__}已经更新到{self.last_date}, 不需要再更新')
 
 
 if __name__ == "__main__":

@@ -82,7 +82,7 @@ DEFAULT_TUSHARE_TOKEN = "4907b8834a0cecb6af0613e29bf71847206c41ddc3e598b9a25a020
 TUSHARE_META_DRIVER_URL_KEY = "tushare.meta.driver_url"
 TUSHARE_META_DIR_KEY = "tushare.meta.dir"
 TUTAKE_PROCESS_THREAD_CNT_KEY = 'tutake.process.thread_cnt'
-TUTAKE_LOGGING_CONFIG_KEY = 'tutake.logger.config_file'
+TUTAKE_LOGGING_CONFIG_KEY = 'tutake.logs.config_file'
 TUTAKE_SCHEDULER_CONFIG_KEY = 'tutake.scheduler'
 TUTAKE_SQLITE_TIMEOUT_CONFIG_KEY = 'tutake.sqlite.timeout'
 
@@ -232,7 +232,7 @@ class TutakeConfig(object):
             logging.warning(
                 f"Logger config file is not config or not exists. {logger_config_path}")
             logger_config_path = f"{file_dir(__file__)}/ts_logger.yml"
-            logging.warning(f"Use default logger config: {logger_config_path}")
+            logging.warning(f"Use default logs config: {logger_config_path}")
         return logger_config_path
 
     def get_process_thread_cnt(self):

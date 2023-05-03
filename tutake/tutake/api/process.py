@@ -52,9 +52,9 @@ class DataProcess:
         同步历史数据
         :return:
         """
-        # self.logger.info(f"Start {self.entities.__name__} process.")
+        # self.logs.info(f"Start {self.entities.__name__} process.")
         process.console.log(f"Start {self.entities.__name__} process.")
-        if self.config.get_config("tutake.logger.console", False):
+        if self.config.get_config("tutake.logs.console", False):
             report = self._report_container.create_process_report("tushare_%s" % self.name, self.name, process.console)
         else:
             report = self._report_container.create_process_report("tushare_%s" % self.name, self.name, None)

@@ -211,25 +211,25 @@ class ProcessReport:
         if self.logger:
             # if result.status == 'Skip':
             #     if len(self.params) > 10:
-            #         self.logger.log(
+            #         self.logs.logs(
             #             "[{}] Skip exec param: {} and {} more".format(self.get_process_percent(), self.params[:10],
             #                                                           len(self.params)))
             #     else:
-            #         self.logger.log("[{}] Skip exec param: {}".format(self.get_process_percent(), self.params))
+            #         self.logs.logs("[{}] Skip exec param: {}".format(self.get_process_percent(), self.params))
             if result.status == 'Failed':
                 self.logger.log(f"{self.name} Throw exception with param: {result.params} err:{result.err}")
-                # self.logger.error("Throw exception with param: {} err:{}".format(result.params, result.err))
+                # self.logs.error("Throw exception with param: {} err:{}".format(result.params, result.err))
             elif result.status == 'Success':
                 if self.percent.is_step_percent():
                     self.logger.log(
                         f"({self.name}-{self.get_process_percent()[1]}) Fetch and append data, cnt is {result.cnt} param is {result.new_params}")
-                    # self.logger.info("[{}-{}] Fetch and append data, cnt is {} . param is {}".format(self.name,
+                    # self.logs.info("[{}-{}] Fetch and append data, cnt is {} . param is {}".format(self.name,
                     #                                                                                  self.get_process_percent()[
                     #                                                                                      1],
                     #                                                                                  result.cnt,
                     #                                                                                  result.new_params))
                 # else:
-                #     self.logger.debug("[{}-{}] Fetch and append data, cnt is {} . param is {}".format(self.name,
+                #     self.logs.debug("[{}-{}] Fetch and append data, cnt is {} . param is {}".format(self.name,
                 #                                                                                       self.get_process_percent()[
                 #                                                                                           1],
                 #                                                                                       result.cnt,

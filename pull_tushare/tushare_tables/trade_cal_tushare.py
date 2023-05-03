@@ -24,7 +24,7 @@ class TradeCalTushare(MetaDataBase):
             df_table2 = tushare_api.trade_cal(exchange=i)
             df_table = pd.concat([df_table, df_table2], axis=0)
         if len(df_table) == 0:
-            print(f'{self.to_table.__tablename__}下载失败')
+            self.logger.error(f'{self.to_table.__tablename__}下载失败')
         return df_table
 
     def process(self, df_table):
@@ -39,14 +39,14 @@ class TradeCalTushare(MetaDataBase):
         data_api.delete_data(delete(TradeCal))
         data_api.delete_data(delete(TradeWeek))
         data_api.delete_data(delete(TradeMonth))
-        print('删除trade_cal、trade_week、trade_month')
+        self.logger.info('删除trade_cal、trade_week、trade_month')
         try:
             data_api.write(df_table, TradeCal)
-            print('trade_cal写入数据成功')
+            self.logger.info('trade_cal写入数据成功')
             self.write_TradeWeek()
             self.write_TradeMonth()
         except sqlite3.IntegrityError:
-            print('trade_cal已经存在或%s' % sqlite3.IntegrityError)
+            self.logger.warning('trade_cal已经存在或%s' % sqlite3.IntegrityError)
 
     def write_TradeWeek(self):
         # 交易日历上每周最后一个交易日
@@ -62,9 +62,9 @@ class TradeCalTushare(MetaDataBase):
         df = df.drop(columns=['week_info', 'year', 'week', 'day'])
         try:
             data_api.write(df, TradeWeek)
-            print('trade_week写入数据成功')
+            self.logger.info('trade_week写入数据成功')
         except sqlite3.IntegrityError:
-            print('trade_week已经存在或%s' % sqlite3.IntegrityError)
+            self.logger.warning('trade_week已经存在或%s' % sqlite3.IntegrityError)
 
     def write_TradeMonth(self):
         # 交易日历上每周最后一个交易日
@@ -80,9 +80,9 @@ class TradeCalTushare(MetaDataBase):
         df = df.drop(columns=['month_info', 'year', 'month', 'day'])
         try:
             data_api.write(df, TradeMonth)
-            print('trade_month写入数据成功')
+            self.logger.info('trade_month写入数据成功')
         except sqlite3.IntegrityError:
-            print('trade_month已经存在或%s' % sqlite3.IntegrityError)
+            self.logger.warning('trade_month已经存在或%s' % sqlite3.IntegrityError)
 
     def record(self, today, df_table):
         df_record = pd.DataFrame()
@@ -108,7 +108,7 @@ class TradeCalTushare(MetaDataBase):
             self.write(df_table)         # 写入数据
             self.record(today, df_table)     # 记录更新
         else:
-            print(f'{self.to_table.__tablename__}已经更新到{date}, 不需要再更新')
+            self.logger.info(f'表{self.to_table.__tablename__}已经更新到{date}, 不需要再更新')
 
 
 if __name__ == "__main__":

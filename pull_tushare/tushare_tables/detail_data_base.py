@@ -9,6 +9,7 @@ from models.table_models import *
 from models.api import *
 from utils import to_datetime
 from utils import today_todatetime
+from utils.logger import LoggerTushare
 
 
 class DetailDataBase:
@@ -19,6 +20,7 @@ class DetailDataBase:
         self.to_datetime_list = ['trade_date']
         self.frequency = 'dayly'
         self.begin_time = datetime.datetime.now()
+        self.logger = LoggerTushare(self.__class__.__name__).logger
 
     def get_last_date(self):
         """ 读取本地数据库最新日期的数据 """
@@ -81,11 +83,11 @@ class DetailDataBase:
             start_date = self.record_cal[0]
             self.last_date = start_date
         else:
-            print(f'{self.to_table.__tablename__}上一次更新到', self.last_date)
+            self.logger.info(f'{self.to_table.__tablename__}上一次更新到', self.last_date)
             start_date = self.record_cal[self.record_cal.index(self.last_date)+1]  # 在数据库的最后一个日期再往后移动一天
         # 计算需要更新的百分比
         update_percent = round(self.record_cal.index(self.last_date) / self.record_cal.index(self.end_date) * 100, 2)
-        print(f'表{self.to_table.__tablename__}已更新： {update_percent}%。', '下一步：', start_date, '至', self.end_date)
+        self.logger.info(f'表{self.to_table.__tablename__}已更新： {update_percent}%。', '下一步：', start_date, '至', self.end_date)
         # 准备下载日期区间[start_date, end_date]
         update_date_list = self.record_cal[self.record_cal.index(start_date):self.record_cal.index(self.end_date)+1]
         return update_date_list
@@ -101,7 +103,7 @@ class DetailDataBase:
                 df = self.get_data_from_tushare(date)
                 break
             except Exception as e:
-                print(f'在下载表{self.to_table.__tablename__}{date}时等待20秒', e)
+                self.logger.warning(f'在下载表{self.to_table.__tablename__}{date}时等待20秒', e)
                 time.sleep(20)
         return df
 
@@ -127,7 +129,7 @@ class DetailDataBase:
         for date in self.update_date_list:               # 遍历更新日期列表
             if round(self.update_date_list.index(date) / self.update_date_list.index(self.end_date) * 100, 2) >= percent:
                 during_time = datetime.datetime.now() - self.begin_time
-                print(f'{self.to_table.__tablename__}写入{percent}%，已经用时{during_time}')
+                self.logger.info(f'{self.to_table.__tablename__}写入{percent}%，已经用时{during_time}')
                 percent += 2
             df = self.get_data_from_tushare_wait(date)   # 下载数据（从数据库最后日期到今天的
             df = self.process_data(df, date)             # 处理数据
@@ -145,14 +147,14 @@ class DetailDataBase:
         frequency_date = self.get_frequency_date()           # 依据更新频率，设置更新日期边界
         self.today = today_todatetime()                      # 记录现在时间 2023-04-29 10:15:59.517954
         if self.today <= frequency_date:
-            print(f'{self.to_table.__tablename__}已经更新到{self.last_date}, 现在不需要，大于{frequency_date}再更新')
+            self.logger.info(f'{self.to_table.__tablename__}已经更新到{self.last_date}, 现在不需要，大于{frequency_date}再更新')
             return
 
         # 判断更新日期是不是到了日历最新
         self.record_cal = self.get_record_cal()              # 数据记录日历
         self.end_date = self.get_end_date()                  # 依据today，向前取日历结束日期
         if self.last_date == self.end_date:                  # 如果记录日期更新到日历结束日期，停止；否则继续
-            print(f'表{self.to_table.__tablename__}已更新到最近的日期{self.end_date}')
+            self.logger.info(f'表{self.to_table.__tablename__}已更新到最近的日期{self.end_date}')
             return
         self.update_date_list = self.get_update_date_list()  # 数据更新日期列表
         self.update_data()                                   # 更新数据

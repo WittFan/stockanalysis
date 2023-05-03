@@ -109,7 +109,7 @@ class TushareProcessTask:
                 try:
                     reports.append(__process(f"tutake_{task.name}", task))
                 except Exception as err:
-                    # self.logger.error(f"Exception with {api} process,err is {err}")
+                    # self.logs.error(f"Exception with {api} process,err is {err}")
                     continue
         self._end_process()
         process.console.log(f"Finished {len(reports)} of scheduled tasks, it takes {time.time() - start}s")
