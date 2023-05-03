@@ -47,10 +47,5 @@ def manual_start():
         pool.map(action, detail_list)
 
 if __name__ == "__main__":
-    # 下一步工作：
-    # 任务：
-    # 4.使用说明，包括在数据库注册表，写下载数据的类，加入更新判断条件
-    # 上面完成，数据部分就结束了
-    # 5.模拟大数投资策略
-    # 6.和rmfish沟通tutake
+    
     manual_start()
