@@ -69,9 +69,9 @@ class IndexBasic(Base):
     exp_date = Column(DateTime, comment='终止日期')
 ```
 
-### 4.使用数据
+### 4.增删改查数据
 
-通过如下代码查询数据，更多功能参考models/api.py。
+通过如下代码查询数据，更多增删改查功能参考models/api.py。
 
 ```python
 from models.table_models import *
