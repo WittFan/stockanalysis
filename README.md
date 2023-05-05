@@ -1,0 +1,3 @@
+# stockanalysis
+analyze sotock
+
