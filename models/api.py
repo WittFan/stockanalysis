@@ -122,11 +122,11 @@ if __name__ == '__main__':
     # data_api.update(update_magic)
     #
     # 4.查询数据
-    # query_magic = session.query(Test.id, Test.cal_date).filter(Test.id > 0).filter(Test.exchange=='SSE')
-    # df = data_api.query(query_magic)
-    # query_magic = session.query(TradeCal)
-    # df = data_api.query(query_magic)
-    # print(df)
+    query_magic = session.query(Test.id, Test.cal_date).filter(Test.id > 0).filter(Test.exchange=='SSE')
+    df = data_api.query(query_magic)
+    query_magic = session.query(TradeCal)
+    df = data_api.query(query_magic)
+    print(df)
 
     # # 5.原生sql
     # df = data_api.sql(text('select * from test;'))
