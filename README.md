@@ -1,5 +1,5 @@
 # Stockanalyser
-analyze sotock
+该项目用于分析上市公司及股票价格，辅助选股。
 
 ## Quick Start
 
@@ -71,7 +71,7 @@ class IndexBasic(Base):
 
 ### 4.使用数据
 
-通过如下代码使用数据
+通过如下代码查询数据，更多功能参考models/api.py。
 
 ```python
 from models.table_models import *
