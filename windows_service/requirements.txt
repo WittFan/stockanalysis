@@ -1,0 +1,13 @@
+# Windows QMT 交易服务依赖
+# 安装：pip install -r requirements.txt
+#
+# 注意：xtquant 由 MiniQMT 客户端自带，不通过 pip 安装
+# 需将 MiniQMT 安装目录下的 xtquant 添加到 PYTHONPATH
+
+# ── REST API 服务 ──
+flask
+flask-cors
+
+# ── 工具 ──
+loguru
+requests

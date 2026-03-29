@@ -1,0 +1,45 @@
+# ── 核心数据层 ──
+sqlalchemy==1.4.45
+duckdb
+duckdb-engine
+pandas
+pendulum
+tushare
+
+# ── 回测引擎 ──
+backtrader
+numpy==1.23.4
+scipy
+scikit-learn
+empyrical
+tqdm
+
+# ── 可视化 ──
+bokeh
+
+# ── 工具 ──
+loguru
+tomli
+toml
+seaborn
+
+# ── GUI ──
+wxpython
+
+# ── 开发/测试 ──
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.1
+
+# ── 因子挖掘（可选）──
+# gplearn
+# gpquant
+
+# ── 强化学习（可选）──
+# stable_baselines3==2.0.0
+# sb3_contrib==2.0.0
+# tensorflow
+# keras
+
+# ── 高级 ML（可选）──
+# autogluon

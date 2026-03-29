@@ -1,0 +1,10 @@
+# xtquant 是 Windows 专属二进制库，通过 MiniQMT 安装，不纳入版本控制
+xtquant/
+
+# 运行日志
+logs/
+
+# Python 字节码缓存
+__pycache__/
+*.pyc
+*.pyo
