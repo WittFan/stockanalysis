@@ -41,18 +41,16 @@ Thumbs.db
 config.py
 windows_service/config.py
 
-# Node.js / Electron
-node_modules/
-package-lock.json
-frontend/node_modules/
-frontend/package-lock.json
+# Node.js / Electron（统一在 desktop/ 目录下管理）
+desktop/node_modules/
+desktop/package-lock.json
 
 # 前端构建产物（发布时单独处理）
-frontend/dist/
+desktop/frontend/dist/
 
 # Electron 打包产物
 build/dist/
-electron/resources/
+desktop/electron/resources/
 
 # electron-builder 缓存
 .electron-builder-cache/

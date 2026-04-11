@@ -38,8 +38,9 @@ function startBackend() {
   if (isDev) {
     // 开发模式：使用系统 Python
     bin  = 'python'
-    args = [path.join(__dirname, '../run.py'), `--port=${BACKEND_PORT}`]
-    cwd  = path.join(__dirname, '..')
+    // __dirname = desktop/electron/，项目根在上两级
+    args = [path.join(__dirname, '../../run.py'), `--port=${BACKEND_PORT}`]
+    cwd  = path.join(__dirname, '../..')
   } else {
     // 生产模式：使用 PyInstaller 打出的可执行文件
     const backendDir = path.join(process.resourcesPath, 'backend')

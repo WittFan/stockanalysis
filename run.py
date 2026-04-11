@@ -50,14 +50,14 @@ def main():
 
     app = create_app(xlsx_path=xlsx_path, root_path=ROOT)
 
-    dist_exists = (ROOT / 'frontend' / 'dist').exists()
+    dist_exists = (ROOT / 'desktop' / 'frontend' / 'dist').exists()
 
     logger.info('─' * 52)
     logger.info(f'量化投研平台已启动 → http://localhost:{args.port}')
     if dist_exists:
         logger.info('模式：生产（Flask 托管前端）')
     else:
-        logger.info('模式：开发（前端请运行 cd frontend && npm run dev）')
+        logger.info('模式：开发（前端请运行 cd desktop && npm run dev）')
         logger.info('前端地址 → http://localhost:5173')
     logger.info('API 接口：')
     logger.info('  GET  /api/chart?period={1|2|3}')

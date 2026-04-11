@@ -28,6 +28,11 @@ AI智能量化投研平台，用于股票/基金/指数数据管理、因子计�
 - `api/` - Flask Web 后端（Blueprint 分模块路由 + Handler 业务逻辑）
   - `api/stockpool.py` - 股票池工具（load_stockpool，供多个 handler 共用）
   - `api/cache.py` - 线程安全内存缓存，支持 TTL 过期
+- `desktop/` - 所有前端 / 桌面端代码（唯一 node_modules）
+  - `desktop/electron/` - Electron 主进程（main.js、preload.js、图标）
+  - `desktop/frontend/` - Vue 3 SPA 源码（src/、index.html）
+  - `desktop/package.json` - 统一 npm 配置（Vue + Vite + Electron + builder）
+  - `desktop/vite.config.js` - Vite 配置（root 指向 frontend/）
 - `config.py` - 全局配置（DB_URI、Tushare token、get_pro() 懒加载）
 - `clawspace/` - 用户自定义策略脚本工作区（algos/factors/projs/scripts），不纳入版本控制
 
@@ -65,13 +70,14 @@ python run.py                        # 启动 Flask 后端（端口 8888）
 python run.py --no-stockpool         # 启动时不加载股票池（快速调试）
 python pull_tushare/main.py          # 拉取 Tushare 数据
 
-# ── 前端（开发）────────────────────────────
-cd frontend && npm run dev           # 启动 Vite dev server（端口 5173）
-
-# ── Electron 桌面端 ────────────────────────
+# ── 前端 + Electron（统一在 desktop/ 目录下）──
+cd desktop
+npm install                          # 首次安装（唯一 node_modules）
+npm run dev                          # 启动 Vite dev server（端口 5173）
 npm run electron:dev                 # 启动 Electron 窗口（开发模式，需先启动后端和前端）
-npm run frontend:build               # 构建 Vue → frontend/dist/
+npm run build                        # 构建 Vue → desktop/frontend/dist/
 npm run electron:build               # 打包桌面安装包 → build/dist/
+npm run build:all                    # 构建前端 + 打包 Electron 一步完成
 ```
 
 ## 详细文档

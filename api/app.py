@@ -21,7 +21,7 @@ from loguru import logger
 
 
 def create_app(xlsx_path: str = None, root_path: Path = None) -> Flask:
-    dist_dir = Path(__file__).parent.parent / 'frontend' / 'dist'
+    dist_dir = Path(__file__).parent.parent / 'desktop' / 'frontend' / 'dist'
     app = Flask(
         __name__,
         static_folder=str(dist_dir) if dist_dir.exists() else None,
