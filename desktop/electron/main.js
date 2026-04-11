@@ -81,12 +81,19 @@ function startBackend() {
 
   console.log(`[backend] 启动：${bin} ${args.join(' ')}`)
 
+  // 构建子进程环境：继承父进程变量，但剔除 HTTP 代理设置。
+  // Tushare 等金融 API 应直连，不走本地 VPN/代理（否则超时或被拦截）。
+  const childEnv = { ...process.env, PYTHONUNBUFFERED: '1' }
+  for (const key of ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'all_proxy']) {
+    delete childEnv[key]
+  }
+
   backendProcess = spawn(bin, args, {
     cwd,
     stdio: 'pipe',
     // Windows 下需要 shell:true 才能找到 .exe
     shell: process.platform === 'win32' && isDev,
-    env: { ...process.env, PYTHONUNBUFFERED: '1' },
+    env: childEnv,
   })
 
   backendProcess.stdout.on('data', d => process.stdout.write(`[backend] ${d}`))

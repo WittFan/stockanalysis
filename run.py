@@ -15,8 +15,13 @@
     python run.py                  # Flask 同时托管前端
 """
 import argparse
+import os
 import sys
 from pathlib import Path
+
+# Tushare 等金融 API 直连，不走系统代理（避免 VPN 代理导致超时）
+for _proxy_key in ('http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'all_proxy'):
+    os.environ.pop(_proxy_key, None)
 
 ROOT = Path(__file__).parent
 if str(ROOT) not in sys.path:
