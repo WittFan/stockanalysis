@@ -18,8 +18,8 @@ def init_db():
     创建所有 ORM 表（如不存在）。
     应在 Flask/脚本启动时显式调用，而非在导入时自动执行。
     """
+    import orm_models.table_models  # noqa: F401 — 触发所有 Model 类注册到 metadata
     from orm_models.base import Base
-    from orm_models.table_models import *  # noqa: F401,F403 — 触发所有 Model 类注册到 metadata
     Base.metadata.create_all(engine)
 
 
