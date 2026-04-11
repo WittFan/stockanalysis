@@ -1,19 +1,21 @@
 """
 Flask 应用工厂
 
-用法（开发模式）:
+开发模式：
     python run.py
+    cd frontend && npm run dev   # Vite dev server 代理 /api/* 到 Flask
 
-生产模式（前端已构建）:
+生产模式（前端已构建）：
     cd frontend && npm run build
-    python run.py
+    python run.py                # Flask 同时托管 frontend/dist/
 
 Electron 桌面端：
-    main.js 以子进程方式启动本服务，轮询 GET /api/health 确认就绪后再显示窗口
+    electron/main.js 以子进程方式启动本服务，
+    轮询 GET /api/health 确认就绪后再显示 BrowserWindow。
 """
 from pathlib import Path
 
-from flask import Flask, jsonify
+from flask import Flask
 from flask_cors import CORS
 from loguru import logger
 
@@ -28,9 +30,9 @@ def create_app(xlsx_path: str = None) -> Flask:
     CORS(app)
 
     # ── 初始化 handler ────────────────────────────────────────────────────────
-    from web_service.handlers.chart_handler import ChartHandler
-    from web_service.handlers.backtest_handler import BacktestHandler
-    from web_service.handlers.value_matrix_handler import ValueMatrixHandler
+    from api.handlers.chart_handler import ChartHandler
+    from api.handlers.backtest_handler import BacktestHandler
+    from api.handlers.value_matrix_handler import ValueMatrixHandler
 
     chart_handler    = ChartHandler()
     backtest_handler = BacktestHandler()
@@ -54,7 +56,7 @@ def create_app(xlsx_path: str = None) -> Flask:
     app.register_blueprint(make_value_bp(value_handler),        url_prefix='/api')
     app.register_blueprint(health_bp,                           url_prefix='/api')
 
-    # ── SPA fallback（生产模式）──────────────────────────────────────────────
+    # ── SPA fallback（生产模式：Flask 托管前端静态文件）──────────────────────
     if dist_dir.exists():
         @app.route('/', defaults={'path': ''})
         @app.route('/<path:path>')
@@ -66,7 +68,7 @@ def create_app(xlsx_path: str = None) -> Flask:
             return (
                 '<h3>开发模式</h3>'
                 '<p>前端请运行：<code>cd frontend &amp;&amp; npm run dev</code></p>'
-                '<p>API 可直接访问：<a href="/api/bokeh-cdn">/api/bokeh-cdn</a></p>'
+                '<p>Electron：<code>npm run electron:dev</code></p>'
             )
 
     return app

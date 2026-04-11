@@ -12,7 +12,7 @@ import pandas as pd
 from loguru import logger
 from sqlalchemy import text
 
-from web_service.cache import chart_cache, industry_cache
+from api.cache import chart_cache, industry_cache
 
 
 # ── 颜色生成 ──────────────────────────────────────────────────────────────────

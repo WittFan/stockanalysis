@@ -21,8 +21,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as
 import pandas as pd
 from loguru import logger
 
-from web_service.cache import value_cache
-from web_service.handlers.chart_handler import load_stockpool
+from api.cache import value_cache
+from api.handlers.chart_handler import load_stockpool
 
 
 # ── 常量 ──────────────────────────────────────────────────────────────────────

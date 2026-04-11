@@ -1,6 +1,6 @@
 """
 线程安全的内存缓存。
-供各 handler 按 key 缓存渲染结果（如按 period 缓存图表 HTML）。
+供各 handler 按 key 缓存计算结果（如按 period 缓存图表数据）。
 """
 import threading
 
@@ -28,6 +28,6 @@ class Cache:
 
 
 # 各 handler 共享的全局缓存实例
-chart_cache    = Cache()     # key: period(int) → (script, div, meta, count)
-industry_cache = Cache()     # key: period(int) → html_str
-value_cache    = Cache()     # key: 'raw_{year}' → DataFrame；(year, metric) → (script, div, stocks, count)
+chart_cache    = Cache()   # key: period(int) → {dates, series, count}
+industry_cache = Cache()   # key: period(int) → {dates, groups, total}
+value_cache    = Cache()   # key: 'raw_{year}' → DataFrame；(year, metric) → {stocks, count}
