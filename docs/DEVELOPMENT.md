@@ -9,10 +9,11 @@ AI智能量化投研平台，用于股票/基金/指数数据管理、因子计�
 - 数据源：Tushare API
 - 回测+实盘引擎：Backtrader（统一）+ 自定义算子系统
 - 实盘对接：QMT (xtquant) via Windows REST API 服务
-- GUI：wxPython
+- Web 后端：Flask（Blueprint 分模块路由）
+- Web 前端：Vue 3 + Vite
 - 数据处理：Pandas、NumPy、TA-Lib
 - 机器学习：AutoGluon、LightGBM
-- 可视化：Bokeh
+- 可视化：ECharts（前端渲染，后端只返回纯 JSON 数据）
 - 日志：Loguru
 - 日期处理：Pendulum
 
@@ -901,4 +902,661 @@ stockanalysis/
 | P1 | 实现 `/positions` 页面：持仓/委托表格（依赖 Windows QMT 服务） | 中 |
 | P1 | 抽取公共 `base.html` 导航栏模板，统一各页面风格 | 中 |
 | P2 | 实现 `/order` 手动下单页面 | 低 |
-| P2 | 废弃 `gui/` 目录，`main.py` 改为 `web_service` 启动入口 | 低 |
+
+---
+
+## 十三、Web 前后端分离架构规划
+
+### 13.1 技术选型决策
+
+| 层 | 选型 | 备选 | 选择原因 |
+|---|---|---|---|
+| 后端框架 | **Flask** | FastAPI | 轻量，Blueprint 与现有 handler 分层天然对应；单用户本地场景无需 async 和 Pydantic 校验 |
+| 前端框架 | **Vue 3 + Vite** | React | 学习曲线平缓，对 Python 开发者友好；单人开发，React 生态优势体现不出来 |
+| 图表渲染 | **ECharts 前端渲染** | Bokeh 服务端 | 后端只返回纯数据 JSON，前端 ECharts 自主渲染；解耦彻底，无 CDN 外部依赖，Vue 集成自然 |
+| 数据库 | **DuckDB** | PostgreSQL | 单用户本地，无多写冲突；单文件部署简单 |
+
+### 13.2 目标目录结构
+
+```
+stockanalysis/
+├── api/                        ← Flask 后端（替代现有 web_service/）
+│   ├── app.py                  ← Flask app 工厂（create_app()）
+│   ├── routes/
+│   │   ├── chart.py            ← /api/chart/*
+│   │   ├── industry.py         ← /api/industry/*
+│   │   ├── backtest.py         ← /api/backtest/*
+│   │   └── value.py            ← /api/value/*
+│   └── handlers/               ← 现有 handler 逻辑基本不动（去掉 HTML 渲染）
+│       ├── chart_handler.py
+│       ├── backtest_handler.py
+│       └── value_matrix_handler.py
+│
+└── frontend/                   ← Vue 3 + Vite
+    ├── src/
+    │   ├── views/              ← Chart.vue / Industry.vue / Backtest.vue / Value.vue
+    │   ├── components/
+    │   │   └── EChartsWrapper.vue  ← 通用 ECharts 容器（init/dispose/resize/option watch）
+    │   └── router/             ← vue-router 路由配置
+    ├── dist/                   ← 构建产物，提交到仓库（用户无需安装 Node）
+    └── vite.config.js          ← 开发时代理 /api/* 到 Flask
+```
+
+### 13.3 开发模式 vs 生产模式
+
+**开发时：**
+```
+Vite dev server (:5173) → 代理 /api/* → Flask (:5000)
+热重载前端，Flask 同步调试
+```
+
+**生产/发布时：**
+```
+npm run build → dist/
+Flask 静态托管 dist/，单进程单端口，无需 Nginx
+```
+
+### 13.4 分发策略与降低安装难度
+
+**定位：开源自托管**
+- 用户下载代码，填写自己的 Tushare token，本地运行
+- 数据完全本地，不依赖外部服务
+- 将来用户规模扩大后再考虑 SaaS（需换 PostgreSQL + 用户认证体系）
+
+**降低安装门槛的措施（优先级排序）：**
+
+| 措施 | 效果 | 说明 |
+|---|---|---|
+| `dist/` 提交到仓库 | 高 | 用户无需安装 Node.js/npm，直接 `pip install + python` 即可 |
+| Docker 镜像 | 高 | `docker run` 一行启动，无需配置 Python 环境和依赖 |
+| 一键启动脚本 | 中 | `start.sh`/`start.bat`，自动检测环境、初始化数据库、启动服务 |
+| 引导式首次配置 | 中 | 首次启动自动检测 `config.py` 是否存在，不存在则提示填写 token |
+
+### 13.5 现有代码迁移成本评估
+
+`web_service/` 现有 handler 代码**几乎不需要改动**，主要改动点：
+
+1. `server.py` 路由 → 换成 Flask Blueprint（约 50 行）
+2. Handler 去掉 HTML 渲染部分，`return dict` 即可，Flask 自动转 JSON
+3. 前端新建 Vue 项目，使用 ECharts 渲染图表，后端只提供纯数据 JSON
+
+**迁移步骤（已完成）：**
+
+| 步骤 | 内容 | 状态 |
+|---|---|---|
+| 1 | `web_service/` → `api/`，handler 改为返回 dict | ✅ 已完成 |
+| 2 | 新建 Flask app.py，注册 Blueprint | ✅ 已完成 |
+| 3 | `vue create frontend` + 配置 Vite 代理 | ✅ 已完成 |
+| 4 | 安装 echarts，创建 EChartsWrapper.vue 通用组件 | ✅ 已完成 |
+| 5 | 逐页面改写：Chart / Industry / Value 全部迁移至 ECharts | ✅ 已完成 |
+| 6 | 移除 Bokeh CDN 依赖，后端 handler 去掉 bokeh import | ✅ 已完成 |
+| 7 | `npm run build` → `dist/`，Flask 托管静态文件 | 待执行 |
+| 8 | 提交 `dist/`，更新用户安装文档 | 待执行 |
+
+---
+
+## 十四、Bokeh → ECharts 迁移记录
+
+### 14.1 迁移背景
+
+初始设计采用 Bokeh 服务端渲染（`components()` 返回 `script + div`，前端注入 DOM）。
+实际使用中暴露三类问题：
+
+| 问题 | 具体表现 |
+|---|---|
+| CDN 依赖 | 需在 `index.html` 手动引入 Bokeh CDN（3 个 script），国内可能加载慢 |
+| Vue 集成摩擦 | `v-if` 切换组件时 watch 触发时机不对（`immediate` 在 DOM 挂载前执行），导致图表空白 |
+| 前后端耦合 | 改颜色/字体须修改 Python 代码并重启服务 |
+
+### 14.2 迁移方案
+
+**后端**：移除所有 `bokeh.embed` / `bokeh.plotting` / `bokeh.models` 导入，handler 直接返回纯数据 JSON。
+
+| API 端点 | 迁移前返回 | 迁移后返回 |
+|---|---|---|
+| `GET /api/chart` | `{script, div, meta, count}` | `{dates, series:[{sym,name,color,values}], count}` |
+| `GET /api/industry` | `{script, figures:[{name,count,div}], total}` | `{dates, groups:[{name,count,series}], total}` |
+| `GET /api/value/data` | `{script, div, stocks, count}` | `{stocks:[{code,name,x,y}], count}` |
+| `POST /api/value/forecast` | `{script, div}` | `{stocks:[{code,name,x,y}]}` |
+
+**前端**：`npm install echarts`，新增 `EChartsWrapper.vue` 通用容器，三个页面改用 ECharts computed option 驱动渲染。
+
+### 14.3 EChartsWrapper 设计
+
+```
+props.option（computed，响应式）
+       ↓ watch deep
+  chart.setOption(opt, { notMerge: true })
+       ↓
+  ECharts Canvas 自动重绘
+```
+
+- `onMounted` 初始化，`onBeforeUnmount` dispose + 移除 resize 监听
+- `defineExpose({ getInstance })` 供父组件获取 chart 实例（如需 dispatchAction）
+- 始终挂载，loading 用绝对定位遮罩覆盖（避免销毁重建时机问题）
+
+### 14.4 颜色生成
+
+移除 `bokeh.palettes`，改为纯 Python 实现：
+- ≤20 只：使用 `_PALETTE_20`（Matplotlib tab20 等效色）
+- >20 只：`colorsys.hls_to_rgb` HLS 均匀分布
+
+---
+
+## 十五、前端设计规范：Apple HIG 风格
+
+### 15.1 设计原则来源
+
+前端视觉系统参考 **Apple Human Interface Guidelines (HIG)**，核心理念：
+
+| 原则 | 含义 | 在本项目的体现 |
+|---|---|---|
+| **Clarity（清晰）** | 文字清晰易读，图标精确，装饰服务于内容 | 细分隔线（0.5px）、极轻阴影、去掉多余边框 |
+| **Deference（谦逊）** | UI 烘托内容，不喧宾夺主 | 白色背景、灰阶填充、accent 蓝仅用于主操作 |
+| **Depth（层次）** | 视觉层次传递信息层级 | 卡片阴影、毛玻璃导航栏、面板与内容区分色 |
+
+### 15.2 色彩系统（CSS 变量）
+
+所有颜色定义在 `frontend/src/style.css` 的 `:root` 块，对应 Apple System Colors：
+
+```css
+/* 背景层级 */
+--bg-primary:       #ffffff;   /* systemBackground */
+--bg-secondary:     #f2f2f7;   /* secondarySystemBackground / systemGray6 */
+
+/* 文字 */
+--label:            #1c1c1e;   /* label（主文字） */
+--label-muted:      #8e8e93;   /* quaternaryLabel / 辅助文字 */
+
+/* 分隔线 */
+--separator:        #c6c6c8;   /* separator */
+--separator-opaque: #e5e5ea;   /* opaqueSeparator / systemGray5 */
+
+/* 填充面（交互背景） */
+--fill:             #78788014; /* systemFill（~8% 灰）*/
+--fill-2:           #7878801e; /* secondarySystemFill */
+--fill-3:           #74748028; /* tertiarySystemFill（按钮默认底色）*/
+--fill-4:           #74748032; /* quaternarySystemFill（悬停底色）*/
+
+/* 系统灰阶 */
+--gray ~ --gray-6:  #8e8e93 → #f2f2f7  /* systemGray → systemGray6 */
+
+/* 品牌主色 */
+--accent:           #007aff;   /* systemBlue（Apple 签名蓝）*/
+--accent-hover:     #0066d6;
+
+/* 状态色 */
+--green:            #34c759;   /* systemGreen */
+--red:              #ff3b30;   /* systemRed */
+--orange:           #ff9500;   /* systemOrange */
+```
+
+**使用原则**：
+- 背景固定用 `--bg-primary`（白）/ `--bg-secondary`（浅灰），**不直接写颜色值**
+- 交互元素 hover 用 `--fill-2`，默认底色用 `--fill-3`
+- accent 蓝只用于**主操作按钮**、**激活状态**、**链接/选中**，其余保持灰色
+- 危险操作用 `--red`，成功提示用 `--green`
+
+### 15.3 字体规范
+
+```css
+--font-stack: -apple-system, 'SF Pro Display', 'SF Pro Text',
+              'Helvetica Neue', Helvetica, Arial, sans-serif;
+```
+
+字号采用 Apple HIG 标准字阶（1pt ≈ 1px @1x）：
+
+| 变量 | 尺寸 | 用途 |
+|---|---|---|
+| `--size-xs` | 11px | caption、标签、角标 |
+| `--size-sm` | 13px | footnote、辅助文字 |
+| `--size-body` | 15px | 正文（默认） |
+| `--size-callout` | 16px | callout |
+| `--size-headline` | 17px | 标题、按钮 |
+| `--size-title3` | 20px | 三级页面标题 |
+| `--size-title2` | 22px | 二级标题 |
+| `--size-title1` | 28px | 一级标题 |
+| `--size-large` | 34px | largeTitle |
+
+### 15.4 间距系统（8pt 网格）
+
+```css
+--space-1: 4px   --space-2: 8px   --space-3: 12px  --space-4: 16px
+--space-5: 20px  --space-6: 24px  --space-8: 32px  --space-10: 40px
+```
+
+所有内边距、外边距、间隙一律使用 `--space-*` 变量，不直接写 px。
+
+### 15.5 圆角规范
+
+```css
+--radius-xs: 4px   /* 小控件：输入框、徽章 */
+--radius-sm: 6px   /* 按钮、搜索框、Segmented Control */
+--radius:   10px   /* 卡片、面板（Apple 卡片标准） */
+--radius-lg: 12px  /* 大卡片、iframe */
+--radius-xl: 16px  /* 弹出层、Sheet */
+```
+
+### 15.6 阴影规范
+
+```css
+--shadow-xs: 0 1px 2px rgba(0,0,0,.06)  /* 卡片默认 */
+--shadow-sm: 0 2px 8px rgba(0,0,0,.08)  /* 卡片悬停、下拉 */
+--shadow:    0 4px 16px rgba(0,0,0,.10) /* 弹出层、模态 */
+```
+
+### 15.7 导航栏规范
+
+```
+高度：44px（var(--nav-height)）
+背景：rgba(255,255,255,0.85) + backdrop-filter: blur(20px) saturate(1.8)
+底部分隔：border-bottom: 0.5px solid var(--separator-opaque)
+```
+
+- Logo 字重 600，`--size-headline`，靠左
+- Logo 与菜单之间用 `0.5px × 16px` 竖线隔开
+- 菜单项默认色 `--label-muted`，hover 时背景 `--fill-2`，激活时文字变 `--accent`（无背景高亮）
+- **不使用** box-shadow（保持 Apple 轻量风格）
+
+### 15.8 常用组件规范
+
+#### Segmented Control（分段控制器）
+
+```html
+<div class="seg-ctrl">        <!-- 灰底容器 -->
+  <button class="seg-btn active">选项一</button>   <!-- 激活：白色药片+阴影 -->
+  <button class="seg-btn">选项二</button>
+</div>
+```
+
+```css
+.seg-ctrl  { background: var(--fill-3); border-radius: var(--radius-sm); padding: 2px; }
+.seg-btn   { height: 24px; border-radius: 4px; font-size: var(--size-xs); }
+.seg-btn.active { background: var(--bg-primary); box-shadow: var(--shadow-xs); font-weight: 500; }
+```
+
+#### 卡片（Card）
+
+```css
+.card {
+  background: var(--bg-primary);
+  border-radius: var(--radius);       /* 10px */
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+}
+.card:hover { box-shadow: var(--shadow-sm); }  /* 悬停微抬 */
+```
+
+#### 主操作按钮
+
+```css
+.btn-primary {
+  background: var(--accent);    /* #007aff */
+  color: #ffffff;
+  font-weight: 500;
+  height: 32px;
+  border-radius: var(--radius-sm);
+}
+.btn-primary:hover { background: var(--accent-hover); }
+```
+
+#### 弹出遮罩（Modal Overlay）
+
+```css
+.overlay {
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(8px) saturate(1.6);
+}
+.overlay-card {
+  background: rgba(255,255,255,0.94);
+  border-radius: var(--radius-xl);   /* 16px */
+  box-shadow: var(--shadow);
+}
+```
+
+#### 搜索框
+
+```css
+.search-wrap {
+  background: var(--fill-3);
+  border-radius: var(--radius-sm);
+  height: 28px;
+  /* 无边框，灰底，SVG 放大镜图标 */
+}
+```
+
+### 15.9 ECharts 图表风格
+
+所有图表统一使用以下配置，与 Apple 视觉系统保持一致：
+
+```js
+{
+  backgroundColor: '#ffffff',
+  tooltip: {
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderColor: '#e5e5ea',
+    borderWidth: 0.5,
+    textStyle: { color: '#1c1c1e', fontSize: 12 },
+  },
+  xAxis: {
+    axisLine:  { lineStyle: { color: '#e5e5ea', width: 0.5 } },
+    axisTick:  { lineStyle: { color: '#e5e5ea' } },
+    axisLabel: { color: '#8e8e93', fontSize: 11 },
+    splitLine: { show: false },
+  },
+  yAxis: {
+    axisLine:  { show: false },
+    axisTick:  { show: false },
+    axisLabel: { color: '#8e8e93', fontSize: 11 },
+    splitLine: { lineStyle: { color: '#f2f2f7', width: 1 } },
+  },
+}
+```
+
+- 折线宽度：`1.2px`（细腻，Apple 风格）
+- 散点图默认色：`#007aff`（accent blue），emphasis 用 `#5856d6`（systemPurple）
+- 辅助参考线：`#c6c6c8` dashed，`0.8px`
+
+### 15.10 禁止事项
+
+| 禁止 | 原因 |
+|---|---|
+| 直接写颜色值（如 `color: #333`） | 破坏设计 token 一致性，难以统一维护 |
+| 使用 `border: 1px solid`（实线 1px） | Apple 用 0.5px 分隔线，视觉更轻 |
+| box-shadow 用于导航栏 | Apple nav 只用底部 border，不加投影 |
+| 圆角超过 `--radius-xl`（16px） | 超出 Apple HIG 规范范围 |
+| accent 蓝用于非主操作 | 蓝色过多会稀释视觉重心 |
+| 在 `style.css` 之外定义全局 CSS 变量 | 所有 token 集中管理 |
+
+---
+
+## 十六、桌面端发布规划：Electron 迁移
+
+### 16.1 迁移动机
+
+| 现状痛点 | Electron 解决方案 |
+|---|---|
+| 用户需手动开浏览器访问 `localhost:5173` | 程序启动即自动打开独立窗口，无需浏览器 |
+| 无法生成可分发的 `.app` / `.exe` 安装包 | `electron-builder` 一键打包，支持 macOS/Windows |
+| Python 环境依赖用户自行安装 | PyInstaller 将 Flask 后端打包成独立可执行文件，随安装包分发 |
+| 无系统托盘、无原生菜单 | Electron 提供完整原生菜单栏、Dock 图标、系统托盘支持 |
+| 文件选择/路径输入体验差 | 调用 Electron 原生 `dialog.showOpenDialog()` |
+
+### 16.2 目标架构
+
+```
+┌──────────────────────────────────────────────────────┐
+│                  Electron 主进程 (main.js)             │
+│                                                      │
+│  ① 启动 Flask 子进程（bundled Python binary）         │
+│     spawn('python-backend', ['run.py', '--port=8888'])│
+│                                                      │
+│  ② 创建 BrowserWindow，加载 dist/index.html           │
+│     preload.js 注入安全的 IPC 桥接                    │
+│                                                      │
+│  ③ 监控子进程，App 退出时自动关闭后端                  │
+└────────────────────┬─────────────────────────────────┘
+                     │ HTTP  localhost:8888
+┌────────────────────▼─────────────────────────────────┐
+│              Flask 后端（Python 子进程）               │
+│              api/ 目录，现有代码不动                   │
+│              DuckDB data/duck.db  + Tushare API       │
+└──────────────────────────────────────────────────────┘
+                     ↑ fetch('/api/...')
+┌────────────────────┴─────────────────────────────────┐
+│           Vue 3 渲染进程（BrowserWindow）              │
+│           frontend/dist/  静态文件（已构建）           │
+│           ECharts 图表、Apple 风格 UI                  │
+└──────────────────────────────────────────────────────┘
+```
+
+**核心设计决策**：Electron 与 Flask 之间**继续使用 HTTP**（`fetch('/api/...')`），而不是 IPC。原因：
+- 前端代码**零改动**，所有 API 调用路径不变
+- Flask 进程可独立调试，保留命令行模式兼容性
+- 未来若需要 Web 版本，架构直接复用
+
+### 16.3 目录结构变化
+
+```
+stockanalysis/
+├── electron/                      ← 新增：Electron 主进程代码
+│   ├── main.js                    ← 主进程入口：窗口创建、后端进程管理
+│   ├── preload.js                 ← 安全桥接：暴露有限 API 给渲染进程
+│   └── icons/                     ← 应用图标（.icns / .ico / .png）
+│
+├── frontend/                      ← 不动，仍为 Vue 3 + Vite
+│   ├── src/
+│   └── dist/                      ← 构建产物，Electron 直接加载
+│
+├── api/                           ← 不动，Flask 后端
+│
+├── package.json                   ← 项目根 package.json（Electron 依赖）
+│                                     注意：与 frontend/package.json 分离
+└── build/                         ← electron-builder 配置和产物
+    ├── entitlements.mac.plist
+    └── dist/                      ← 打包产物（.dmg / .exe / .AppImage）
+```
+
+### 16.4 关键文件设计
+
+#### `electron/main.js`（主进程核心逻辑）
+
+```javascript
+const { app, BrowserWindow, shell } = require('electron')
+const { spawn } = require('child_process')
+const path = require('path')
+
+let mainWindow = null
+let backendProcess = null
+const BACKEND_PORT = 8888
+
+// ── 启动 Flask 后端 ──────────────────────────────────────
+function startBackend() {
+  // 生产包：调用 PyInstaller 打出的二进制；开发时：调用系统 python
+  const isProd = app.isPackaged
+  const bin    = isProd
+    ? path.join(process.resourcesPath, 'backend', 'run')  // PyInstaller 产物
+    : 'python'
+  const args   = isProd ? [] : [path.join(__dirname, '../run.py')]
+
+  backendProcess = spawn(bin, [...args, `--port=${BACKEND_PORT}`], {
+    stdio: 'pipe',
+    env: { ...process.env },
+  })
+
+  backendProcess.stdout.on('data', d => console.log('[backend]', d.toString()))
+  backendProcess.stderr.on('data', d => console.error('[backend]', d.toString()))
+  backendProcess.on('exit', code => console.log('[backend] 退出，code:', code))
+}
+
+// ── 等待后端就绪（轮询 /api/health） ─────────────────────
+async function waitForBackend(timeout = 30000) {
+  const start = Date.now()
+  while (Date.now() - start < timeout) {
+    try {
+      const res = await fetch(`http://localhost:${BACKEND_PORT}/api/health`)
+      if (res.ok) return true
+    } catch {}
+    await new Promise(r => setTimeout(r, 300))
+  }
+  throw new Error('后端启动超时')
+}
+
+// ── 创建窗口 ────────────────────────────────────────────
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1280, height: 800,
+    minWidth: 900, minHeight: 600,
+    titleBarStyle: 'hiddenInset',   // macOS：使用隐藏式标题栏
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,       // 安全：禁用 Node.js 访问
+    },
+  })
+
+  // 生产：加载打包后的静态文件；开发：加载 Vite dev server
+  const isDev = !app.isPackaged
+  if (isDev) {
+    mainWindow.loadURL('http://localhost:5173')
+    mainWindow.webContents.openDevTools()
+  } else {
+    mainWindow.loadFile(path.join(__dirname, '../frontend/dist/index.html'))
+  }
+}
+
+app.whenReady().then(async () => {
+  startBackend()
+  await waitForBackend()
+  createWindow()
+})
+
+app.on('before-quit', () => {
+  backendProcess?.kill()
+})
+```
+
+#### `electron/preload.js`（IPC 安全桥接）
+
+```javascript
+const { contextBridge, ipcRenderer } = require('electron')
+
+// 只暴露必要的能力给渲染进程（Vue 前端）
+contextBridge.exposeInMainWorld('electronAPI', {
+  // 打开文件选择对话框（用于选择 stockpool.xlsx / toml 文件等）
+  openFile: (options) => ipcRenderer.invoke('dialog:openFile', options),
+  // 获取应用版本
+  getVersion: () => ipcRenderer.invoke('app:getVersion'),
+  // 在系统浏览器中打开外部链接
+  openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
+})
+```
+
+### 16.5 Flask 后端打包（PyInstaller）
+
+```bash
+# 安装
+pip install pyinstaller
+
+# 打包 Flask 后端为单目录可执行文件（推荐 --onedir，比 --onefile 启动快）
+pyinstaller run.py \
+  --name python-backend \
+  --onedir \
+  --add-data "stockpool.xlsx:." \
+  --add-data "data:data" \
+  --hidden-import tushare \
+  --hidden-import duckdb \
+  --hidden-import flask \
+  --distpath electron/resources/
+```
+
+注意事项：
+- `--add-data` 需包含 `stockpool.xlsx`、初始数据库（可选）
+- TA-Lib 等有 C 扩展的库需在**目标平台**上打包（macOS 打包 `.app`，Windows 打包 `.exe`）
+- 首次打包需在 macOS 和 Windows 各执行一次
+
+### 16.6 Electron 打包（electron-builder）
+
+根目录 `package.json` 关键配置：
+
+```json
+{
+  "name": "dadao-quant",
+  "version": "1.0.0",
+  "main": "electron/main.js",
+  "scripts": {
+    "electron:dev":   "electron .",
+    "electron:build": "electron-builder",
+    "frontend:build": "cd frontend && npm run build"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.dadao.quant",
+    "productName": "大道量化投研平台",
+    "directories": { "output": "build/dist" },
+    "files": [
+      "electron/**",
+      "frontend/dist/**",
+      "!node_modules"
+    ],
+    "extraResources": [
+      { "from": "electron/resources/python-backend", "to": "backend" }
+    ],
+    "mac": {
+      "target":   [{ "target": "dmg", "arch": ["arm64", "x64"] }],
+      "icon":     "electron/icons/icon.icns",
+      "category": "public.app-category.finance"
+    },
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon":   "electron/icons/icon.ico"
+    }
+  }
+}
+```
+
+### 16.7 开发工作流
+
+```
+# 开发时（三端同时运行）
+终端1：python run.py                          # Flask 后端
+终端2：cd frontend && npm run dev             # Vite 前端热重载
+终端3：npm run electron:dev                   # Electron 窗口（加载 :5173）
+
+# 构建发布包
+npm run frontend:build                        # 构建 Vue → dist/
+pyinstaller ...（见 16.5）                    # 打包 Flask → electron/resources/
+npm run electron:build                        # 打包 Electron → build/dist/
+```
+
+### 16.8 /api/health 健康检查接口
+
+主进程需要轮询后端是否就绪，Flask 需增加一个轻量接口：
+
+```python
+# api/routes/health.py
+from flask import Blueprint, jsonify
+bp = Blueprint('health', __name__)
+
+@bp.get('/health')
+def health():
+    return jsonify({'status': 'ok'})
+```
+
+注册到 `create_app()` 中：`app.register_blueprint(health_bp, url_prefix='/api')`
+
+### 16.9 迁移步骤与优先级
+
+| 步骤 | 内容 | 优先级 | 状态 |
+|---|---|---|---|
+| 1 | 根目录 `package.json` + 安装 electron | P0 | ✅ 已完成 |
+| 2 | `electron/main.js`：窗口创建 + 加载 Vite dev URL | P0 | ✅ 已完成 |
+| 3 | `electron/preload.js`：暴露 openFile 等原生 API | P0 | ✅ 已完成 |
+| 4 | 增加 `/api/health` 接口 | P0 | ✅ 已完成 |
+| 5 | main.js 启动/监控 Flask 子进程 | P1 | ✅ 已完成 |
+| 6 | `vite.config.js` 调整 base 为 `'./'`（Electron file:// 兼容） | P1 | ✅ 已完成 |
+| 7 | 制作应用图标（.icns / .ico） | P2 | ⬜ 待执行 |
+| 8 | PyInstaller 打包 Flask 后端 | P2 | ⬜ 待执行 |
+| 9 | electron-builder 生成 .dmg / .exe | P2 | ⬜ 待执行 |
+| 10 | macOS 签名与公证（Apple Developer 证书） | P3 | ⬜ 待执行 |
+| 11 | Windows 代码签名 | P3 | ⬜ 待执行 |
+
+> **P0/P1**：已全部完成（开发模式可用）；**P2**：生成可分发安装包；**P3**：可上架/无安全警告
+
+### 16.10 现有代码兼容性评估
+
+| 模块 | 改动量 | 说明 |
+|---|---|---|
+| `api/routes/health.py` | **新增** | `/api/health` 健康检查，约 10 行 |
+| `api/app.py` | **极小** | 注册 health blueprint，1 行 |
+| `frontend/vite.config.js` | **小** | build 时 base 改为 `'./'`，兼容 file:// 协议 |
+| `frontend/src/`（Vue） | **零** | HTTP fetch 路径完全不变 |
+| `run.py` | **零** | 命令行启动方式保留，兼容 Electron 子进程调用 |
+| `electron/main.js` | **新建** | 主进程：窗口 + 子进程管理 + IPC，约 160 行 |
+| `electron/preload.js` | **新建** | 安全桥接，约 40 行 |
+| 根 `package.json` | **新建** | Electron + electron-builder 依赖配置 |
+
+**保留 Web 模式**：Electron 化后，`python run.py` + 浏览器访问的方式**依然有效**，两种模式共存，不影响现有开发习惯。

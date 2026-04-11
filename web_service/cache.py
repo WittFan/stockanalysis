@@ -28,5 +28,6 @@ class Cache:
 
 
 # 各 handler 共享的全局缓存实例
-chart_cache = Cache()        # key: period(int) → (script, div, meta, count)
+chart_cache    = Cache()     # key: period(int) → (script, div, meta, count)
 industry_cache = Cache()     # key: period(int) → html_str
+value_cache    = Cache()     # key: 'raw_{year}' → DataFrame；(year, metric) → (script, div, stocks, count)

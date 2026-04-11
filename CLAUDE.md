@@ -8,7 +8,9 @@ AI智能量化投研平台，用于股票/基金/指数数据管理、因子计�
 - 数据源：Tushare API
 - 回测+实盘引擎：Backtrader（统一） + 自定义算子系统（engine/algos/）
 - 实盘对接：QMT (xtquant) via Backtrader live 模式（backtrader_qmt_api/）
-- 可视化：Bokeh
+- Web 后端：Flask（api/ 目录，Blueprint 分模块路由）
+- Web/桌面前端：Vue 3 + Vite + Electron（桌面端打包）
+- 图表：ECharts（前端渲染，后端只返回 JSON）
 - 日志：Loguru
 - 日期处理：Pendulum
 
@@ -49,8 +51,17 @@ AI智能量化投研平台，用于股票/基金/指数数据管理、因子计�
 
 ## 常用命令
 ```bash
-python main.py              # 启动 GUI
-python pull_tushare/main.py # 拉取数据
+# ── 后端 ──────────────────────────────────
+python run.py                        # 启动 Flask 后端（端口 8888）
+python pull_tushare/main.py          # 拉取 Tushare 数据
+
+# ── 前端（开发）────────────────────────────
+cd frontend && npm run dev           # 启动 Vite dev server（端口 5173）
+
+# ── Electron 桌面端 ────────────────────────
+npm run electron:dev                 # 启动 Electron 窗口（开发模式，需先启动后端和前端）
+npm run frontend:build               # 构建 Vue → frontend/dist/
+npm run electron:build               # 打包桌面安装包 → build/dist/
 ```
 
 ## 详细文档

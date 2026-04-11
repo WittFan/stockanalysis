@@ -1,0 +1,297 @@
+/*
+ * 大道量化投研平台 · 设计系统
+ * 参考：Apple Human Interface Guidelines (developer.apple.com/design/human-interface-guidelines)
+ *
+ * 色彩：Apple System Colors (light mode)
+ * 字体：SF Pro / -apple-system 字体栈
+ * 间距：8pt 基础网格
+ * 圆角：6 / 10 / 12px（Apple HIG 规范）
+ * 阴影：极轻，仅用于卡片层级感
+ */
+
+/* ── Design Tokens ──────────────────────────────────────────────────────────── */
+:root {
+  /* Apple System Colors – Light Mode
+     Ref: developer.apple.com/design/human-interface-guidelines/color */
+
+  /* 背景层级（Background colors） */
+  --bg-primary:     #ffffff;      /* systemBackground */
+  --bg-secondary:   #f2f2f7;      /* secondarySystemBackground / systemGray6 */
+  --bg-tertiary:    #ffffff;      /* tertiarySystemBackground */
+  --bg-grouped:     #f2f2f7;      /* systemGroupedBackground */
+
+  /* 标签/文字（Label colors） */
+  --label:          #1c1c1e;      /* label */
+  --label-2:        #3c3c4399;    /* secondaryLabel (rgba 60%) */
+  --label-3:        #3c3c434d;    /* tertiaryLabel (rgba 30%) */
+  --label-muted:    #8e8e93;      /* quaternaryLabel / systemGray */
+
+  /* 分隔线（Separator colors） */
+  --separator:      #c6c6c8;      /* separator */
+  --separator-opaque: #e5e5ea;    /* opaqueSeparator / systemGray5 */
+
+  /* 填充/Surface（Fill colors） */
+  --fill:           #78788014;    /* systemFill (~8% gray) */
+  --fill-2:         #7878801e;    /* secondarySystemFill */
+  --fill-3:         #74748028;    /* tertiarySystemFill */
+  --fill-4:         #74748032;    /* quaternarySystemFill */
+
+  /* 系统灰阶（System Grays） */
+  --gray:           #8e8e93;      /* systemGray */
+  --gray-2:         #aeaeb2;      /* systemGray2 */
+  --gray-3:         #c7c7cc;      /* systemGray3 */
+  --gray-4:         #d1d1d6;      /* systemGray4 */
+  --gray-5:         #e5e5ea;      /* systemGray5 */
+  --gray-6:         #f2f2f7;      /* systemGray6 */
+
+  /* 品牌主色（Accent / System Blue） */
+  --accent:         #007aff;      /* systemBlue – Apple 签名蓝 */
+  --accent-hover:   #0066d6;
+  --accent-text:    #ffffff;
+
+  /* 状态色 */
+  --green:          #34c759;      /* systemGreen */
+  --red:            #ff3b30;      /* systemRed */
+  --orange:         #ff9500;      /* systemOrange */
+
+  /* 导航栏 */
+  --nav-bg:         rgba(255, 255, 255, 0.85);  /* 毛玻璃效果 */
+  --nav-border:     var(--separator-opaque);
+  --nav-height:     44px;
+  --nav-text:       var(--label);
+  --nav-link:       var(--label-muted);
+
+  /* 圆角（Apple HIG 规范）*/
+  --radius-xs:      4px;
+  --radius-sm:      6px;
+  --radius:         10px;          /* 卡片、面板 */
+  --radius-lg:      12px;
+  --radius-xl:      16px;
+
+  /* 阴影（极轻，仅表达层级） */
+  --shadow-xs:      0 1px 2px rgba(0,0,0,.06);
+  --shadow-sm:      0 2px 8px rgba(0,0,0,.08);
+  --shadow:         0 4px 16px rgba(0,0,0,.10);
+
+  /* ── 字体缩放因子（由 useFontScale.js 自动写入 / 用户手动调节） ── */
+  --font-scale:     1.15;         /* 默认 medium 档，可选 1.00 / 1.15 / 1.32 */
+
+  /* 排版比例（Apple HIG font scale，1pt ≈ 1px @1x）
+     所有字号乘以 --font-scale，实现全局等比缩放               */
+  --font-stack:     -apple-system, 'SF Pro Display', 'SF Pro Text',
+                    'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --size-xs:        calc(11px * var(--font-scale));   /* caption / tab labels */
+  --size-sm:        calc(13px * var(--font-scale));   /* footnote / secondary */
+  --size-body:      calc(15px * var(--font-scale));   /* body */
+  --size-callout:   calc(16px * var(--font-scale));   /* callout */
+  --size-headline:  calc(17px * var(--font-scale));   /* headline / button */
+  --size-title3:    calc(20px * var(--font-scale));   /* title3 */
+  --size-title2:    calc(22px * var(--font-scale));   /* title2 */
+  --size-title1:    calc(28px * var(--font-scale));   /* title1 */
+  --size-large:     calc(34px * var(--font-scale));   /* largeTitle */
+
+  /* 字间距（Apple 规范：大字负间距，小字正间距） */
+  --tracking-tight: -0.022em;
+  --tracking-body:  -0.015em;
+  --tracking-small: 0;
+
+  /* 行高 */
+  --leading-tight:  1.08;
+  --leading-body:   1.47;
+  --leading-loose:  1.6;
+
+  /* 间距（8pt 网格） */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+}
+
+/* ── Reset ──────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: var(--font-stack);
+  font-size: var(--size-body);
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-body);
+  background: var(--bg-secondary);
+  color: var(--label);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app { height: 100%; display: flex; flex-direction: column; }
+
+/* ── 导航栏（Apple 风格：白底毛玻璃，44px） ─────────────────────────────────── */
+.sa-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 9999;
+  height: var(--nav-height);
+  background: var(--nav-bg);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  border-bottom: 0.5px solid var(--nav-border);
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 var(--space-5);
+}
+
+/*
+ * Electron 桌面端（macOS hiddenInset 模式）：
+ * 交通灯按钮宽度约 68px（3×12px圆 + 间距），起始 x=16px
+ * → 留出 86px 避让，不与 Logo 重叠
+ * -webkit-app-region: drag  让导航栏空白处可拖动窗口
+ * -webkit-app-region: no-drag 还原子元素点击行为
+ */
+.is-electron .sa-nav {
+  padding-left: 86px;
+  -webkit-app-region: drag;
+}
+.is-electron .sa-nav * {
+  -webkit-app-region: no-drag;
+}
+
+.sa-nav .logo {
+  font-size: var(--size-headline);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+  color: var(--label);
+  white-space: nowrap;
+  margin-right: var(--space-5);
+}
+
+.sa-nav .nav-sep {
+  width: 0.5px;
+  height: 16px;
+  background: var(--separator);
+  margin-right: var(--space-4);
+  flex-shrink: 0;
+}
+
+.nav-btn {
+  color: var(--label-muted);
+  text-decoration: none;
+  font-size: var(--size-sm);
+  font-weight: 400;
+  letter-spacing: var(--tracking-small);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: color .15s, background .15s;
+}
+
+.nav-btn:hover { color: var(--label); background: var(--fill-2); }
+
+.nav-btn.active {
+  color: var(--accent);
+  font-weight: 500;
+  background: transparent;
+}
+
+/* ── 页面主体 ───────────────────────────────────────────────────────────────── */
+.sa-page {
+  margin-top: var(--nav-height);
+  flex: 1;
+  overflow: auto;
+}
+
+/* ── 通用卡片 ───────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--bg-primary);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+}
+
+/* ── 通用按钮系统 ───────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--fill-3);
+  color: var(--label);
+  font-size: var(--size-sm);
+  font-family: inherit;
+  font-weight: 400;
+  letter-spacing: var(--tracking-small);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  white-space: nowrap;
+  user-select: none;
+}
+.btn:hover    { background: var(--fill-4); }
+.btn:active   { background: var(--gray-4); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* 主要按钮（accent blue） */
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 500;
+}
+.btn-primary:hover  { background: var(--accent-hover); }
+.btn-primary:active { background: var(--accent-hover); }
+.btn-primary:disabled { background: var(--gray-4); color: var(--label-muted); }
+
+/* ── 通用加载遮罩 ───────────────────────────────────────────────────────────── */
+.loading-mask {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: var(--space-3);
+  color: var(--label-muted);
+  font-size: var(--size-sm);
+}
+
+/* 绝对定位版（覆盖在图表区上） */
+.loading-mask.abs {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,.88);
+  backdrop-filter: blur(4px);
+  z-index: 10;
+  height: auto;
+}
+
+/* Apple 风格 spinner：细线条 */
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--gray-4);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── 通用错误框 ─────────────────────────────────────────────────────────────── */
+.error-box {
+  padding: var(--space-4) var(--space-5);
+  background: #fff2f0;
+  border: 0.5px solid #ffd6d6;
+  border-radius: var(--radius);
+  color: var(--red);
+  font-size: var(--size-sm);
+  text-align: center;
+  margin: var(--space-5);
+}

@@ -36,18 +36,13 @@ NAV_CSS = """
 def build_nav(active: str = '', period: int = 3, info: str = '') -> str:
     """
     生成顶部导航栏 HTML。
-    active: 当前激活的视图名，取值 'chart' | 'industry' | 'backtest'
-    period: 当前选中的年数（仅 chart/industry 有效）
+    active: 当前激活的视图名，取值 'chart' | 'industry' | 'backtest' | 'value'
+    period: 保留参数（供页面内部生成跳转链接使用，导航栏本身不再显示年度按钮）
     info:   导航栏副标题文字
     """
     def _view_btn(name, label, href):
         cls = ' active' if active == name else ''
         return f'<a href="{href}" class="nav-btn{cls}">{label}</a>'
-
-    def _period_btn(p):
-        path = f'/{active}?period={p}' if active in ('chart', 'industry') else f'/chart?period={p}'
-        cls = ' active' if p == period and active in ('chart', 'industry') else ''
-        return f'<a href="{path}" class="nav-btn{cls}">近 {p} 年</a>'
 
     info_html = f'<span class="info">{info}</span>' if info else ''
 
@@ -59,7 +54,6 @@ def build_nav(active: str = '', period: int = 3, info: str = '') -> str:
   {_view_btn('chart',    '📊 总览',  f'/chart?period={period}')}
   {_view_btn('industry', '🗂 行业',  f'/industry?period={period}')}
   {_view_btn('backtest', '🔬 回测',  '/backtest')}
-  <span class="sep">|</span>
-  {_period_btn(1)} {_period_btn(2)} {_period_btn(3)}
+  {_view_btn('value',    '🎯 价值',  '/value')}
   <span class="spacer"></span>
 </nav>"""

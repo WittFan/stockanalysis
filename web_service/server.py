@@ -19,7 +19,7 @@ import argparse
 import json
 import sys
 import urllib.parse
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from loguru import logger
@@ -31,10 +31,12 @@ if str(ROOT) not in sys.path:
 
 from web_service.handlers.chart_handler import ChartHandler
 from web_service.handlers.backtest_handler import BacktestHandler
+from web_service.handlers.value_matrix_handler import ValueMatrixHandler
 
 # 全局 handler 实例（服务生命周期内复用）
-_chart_handler = ChartHandler()
+_chart_handler   = ChartHandler()
 _backtest_handler = BacktestHandler()
+_value_handler   = ValueMatrixHandler()
 
 
 class PlatformHandler(BaseHTTPRequestHandler):
@@ -64,6 +66,17 @@ class PlatformHandler(BaseHTTPRequestHandler):
             self._send_html(html)
             return
 
+        # ── /value ─────────────────────────────────────────────────────────
+        if path == '/value':
+            html = _value_handler.handle_page(qs)
+            self._send_html(html)
+            return
+
+        if path == '/value/data':
+            code, data = _value_handler.handle_data_api(qs)
+            self._send_json(code, data)
+            return
+
         # ── /backtest（列表页）──────────────────────────────────────────────
         if path == '/backtest':
             html = _backtest_handler.handle_list()
@@ -89,6 +102,14 @@ class PlatformHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
         path   = parsed.path.rstrip('/')
+
+        # ── POST /value/forecast ───────────────────────────────────────────
+        if path == '/value/forecast':
+            length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(length) if length else b'{}'
+            code, data = _value_handler.handle_forecast(body)
+            self._send_json(code, data)
+            return
 
         # ── POST /backtest/run ──────────────────────────────────────────────
         if path == '/backtest/run':
@@ -148,15 +169,17 @@ def main():
         xlsx_path = str(ROOT / 'stockpool.xlsx')
         if Path(xlsx_path).exists():
             _chart_handler.init(xlsx_path)
+            _value_handler.init(xlsx_path)
         else:
-            logger.warning(f"未找到 stockpool.xlsx，/chart 和 /industry 页面将不可用")
+            logger.warning(f"未找到 stockpool.xlsx，/chart、/industry、/value 页面将不可用")
 
-    server = HTTPServer(('0.0.0.0', args.port), PlatformHandler)
+    server = ThreadingHTTPServer(('0.0.0.0', args.port), PlatformHandler)
     logger.info('─' * 52)
     logger.info(f'量化投研平台 Web 服务已启动 → http://localhost:{args.port}')
     logger.info(f'  /chart      股票池趋势图')
     logger.info(f'  /industry   行业分组图')
     logger.info(f'  /backtest   策略回测')
+    logger.info(f'  /value      价值坐标系')
     logger.info('按 Ctrl+C 停止')
     logger.info('─' * 52)
 
