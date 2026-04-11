@@ -12,7 +12,7 @@
  */
 
 const { app, BrowserWindow, Menu, shell, ipcMain, dialog } = require('electron')
-const { spawn } = require('child_process')
+const { spawn, execSync } = require('child_process')
 const path  = require('path')
 const http  = require('http')
 
@@ -28,6 +28,22 @@ const isDev = !app.isPackaged
 let mainWindow     = null
 let backendProcess = null
 let splashWindow   = null
+
+
+// ── 0. 清理残留后端进程（避免 DuckDB 文件锁冲突） ────────────────────────────
+
+function killOldBackend() {
+  try {
+    if (process.platform === 'win32') {
+      execSync(`FOR /F "tokens=5" %P IN ('netstat -ano ^| findstr :${BACKEND_PORT}') DO taskkill /PID %P /F`, { stdio: 'ignore' })
+    } else {
+      execSync(`lsof -ti tcp:${BACKEND_PORT} | xargs kill -9 2>/dev/null || true`, { stdio: 'ignore', shell: true })
+    }
+    console.log(`[backend] 已清理端口 ${BACKEND_PORT} 上的残留进程`)
+  } catch (_) {
+    // 端口未占用，正常情况
+  }
+}
 
 
 // ── 1. 启动 Flask 后端 ────────────────────────────────────────────────────────
@@ -268,6 +284,9 @@ function registerIpcHandlers() {
 app.whenReady().then(async () => {
   buildMenu()
   registerIpcHandlers()
+
+  // 启动前先清理残留进程（避免 DuckDB 文件锁冲突）
+  killOldBackend()
 
   // 开发模式：Vite dev server 已经在运行，无需等待后端（用户手动启动 python run.py）
   // 生产模式：启动 Flask 子进程并等待就绪

@@ -17,10 +17,22 @@ def init_db():
     """
     创建所有 ORM 表（如不存在）。
     应在 Flask/脚本启动时显式调用，而非在导入时自动执行。
+
+    DuckDB 单写锁说明：若另一进程已持有锁（如上次未正常退出），
+    跳过建表并警告——表结构已存在，服务仍可正常运行。
     """
     import orm_models.table_models  # noqa: F401 — 触发所有 Model 类注册到 metadata
     from orm_models.base import Base
-    Base.metadata.create_all(engine)
+    from sqlalchemy.exc import OperationalError
+    from loguru import logger
+    try:
+        Base.metadata.create_all(engine)
+        logger.info("数据库初始化完成（表已就绪）")
+    except OperationalError as e:
+        if 'Could not set lock' in str(e) or 'Resource temporarily unavailable' in str(e):
+            logger.warning(f"数据库文件被其他进程占用，跳过建表（表结构应已存在）: {e}")
+        else:
+            raise
 
 
 class DataApi:
