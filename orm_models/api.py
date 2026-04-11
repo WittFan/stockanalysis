@@ -1,18 +1,27 @@
 from config import DB_URI
-from sqlalchemy import select
+from sqlalchemy import select, create_engine, text, delete, desc, asc
 from sqlalchemy.orm import sessionmaker, scoped_session, load_only
-from sqlalchemy import create_engine, text, delete
 import pandas as pd
 from functools import partial
 import pendulum
-from orm_models import table_models
-from orm_models.table_models import *
-from sqlalchemy import desc, asc
 from datetime import datetime
+from orm_models import table_models
+from orm_models.table_models import TradeCal  # 运行时仅用到 TradeCal
 
-engine = create_engine(DB_URI, echo=False)  # 操作数据句柄
-Session = sessionmaker(bind=engine)  # 这里一定要用上下文去管理session,否则会出现很多诡异的情况！！！切记
-session = scoped_session(Session)  # 创建数据库链接池，直接使用session即可为当前线程拿出一个链接对象conn #内部会采用threading.local进行隔离
+engine  = create_engine(DB_URI, echo=False)
+Session = sessionmaker(bind=engine)
+session = scoped_session(Session)
+
+
+def init_db():
+    """
+    创建所有 ORM 表（如不存在）。
+    应在 Flask/脚本启动时显式调用，而非在导入时自动执行。
+    """
+    from orm_models.base import Base
+    from orm_models.table_models import *  # noqa: F401,F403 — 触发所有 Model 类注册到 metadata
+    Base.metadata.create_all(engine)
+
 
 class DataApi:
     def __init__(self):

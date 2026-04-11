@@ -13,6 +13,7 @@ from loguru import logger
 from sqlalchemy import text
 
 from api.cache import chart_cache, industry_cache
+from api.stockpool import load_stockpool  # noqa: F401（重新导出，供历史兼容）
 
 
 # ── 颜色生成 ──────────────────────────────────────────────────────────────────
@@ -38,24 +39,6 @@ def _make_colors(n: int) -> list:
 
 
 # ── 数据加载 ──────────────────────────────────────────────────────────────────
-
-def load_stockpool(xlsx_path: str) -> dict:
-    """读取 stockpool.xlsx，返回去重后的 {股票代码: 标的名称} 字典。"""
-    df = pd.read_excel(xlsx_path, sheet_name='出入池时间表A股')
-    stocks = (
-        df[['标的名称', '股票代码']]
-        .dropna(subset=['股票代码'])
-        .drop_duplicates(subset=['股票代码'])
-    )
-    code_to_name = dict(
-        zip(
-            stocks['股票代码'].astype(str).str.strip(),
-            stocks['标的名称'].astype(str).str.strip(),
-        )
-    )
-    logger.info(f"股票池：原始 {len(df)} 行 → 去重后 {len(code_to_name)} 只")
-    return code_to_name
-
 
 def load_and_normalize(symbols: list, period_years: int) -> pd.DataFrame:
     """使用 Duckdbloader 加载后复权收盘价并归一化（起始日 = 1.0）。"""

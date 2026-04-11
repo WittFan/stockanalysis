@@ -20,7 +20,7 @@ from flask_cors import CORS
 from loguru import logger
 
 
-def create_app(xlsx_path: str = None) -> Flask:
+def create_app(xlsx_path: str = None, root_path: Path = None) -> Flask:
     dist_dir = Path(__file__).parent.parent / 'frontend' / 'dist'
     app = Flask(
         __name__,
@@ -35,7 +35,7 @@ def create_app(xlsx_path: str = None) -> Flask:
     from api.handlers.value_matrix_handler import ValueMatrixHandler
 
     chart_handler    = ChartHandler()
-    backtest_handler = BacktestHandler()
+    backtest_handler = BacktestHandler(root_path=root_path)
     value_handler    = ValueMatrixHandler()
 
     if xlsx_path and Path(xlsx_path).exists():

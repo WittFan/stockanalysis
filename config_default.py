@@ -14,8 +14,26 @@ from pathlib import Path
 
 TUSHARE_TOKEN = ''   # 在 https://tushare.pro 注册后获取
 
-ts.set_token(TUSHARE_TOKEN)
-pro = ts.pro_api()
+# 懒加载：首次调用 get_pro() 时才初始化，避免导入时产生网络调用副作用。
+_pro = None
+
+def get_pro():
+    """获取 Tushare pro API 实例（单例，首次调用时初始化）。"""
+    global _pro
+    if _pro is None:
+        ts.set_token(TUSHARE_TOKEN)
+        _pro = ts.pro_api()
+    return _pro
+
+# 向后兼容：保留 pro 变量，但改为惰性代理——实际上与 get_pro() 等价。
+# 若代码中存在 `from config import pro`，直接调用 pro.xxx() 仍然有效，
+# 但推荐迁移到 get_pro()。
+class _LazyPro:
+    """代理对象，将属性访问转发给真实的 pro 实例，实现惰性初始化。"""
+    def __getattr__(self, name):
+        return getattr(get_pro(), name)
+
+pro = _LazyPro()
 
 # =============================================================================
 # 数据库
@@ -27,15 +45,12 @@ DATA_DIR = WORKDIR / 'data'
 DB_URI = f'duckdb:///{DATA_DIR}/duck.db'
 
 # =============================================================================
-# 数据目录（自动创建）
+# 数据目录路径常量（目录由 run.py 在启动时创建，不在导入时创建）
 # =============================================================================
 
 DATA_DIR_CSVS   = DATA_DIR / 'csvs'
 DATA_DIR_PRJ    = DATA_DIR / 'projs'
 DATA_DIR_MODELS = DATA_DIR / 'models'
-
-for _d in [DATA_DIR, DATA_DIR_CSVS, DATA_DIR_PRJ, DATA_DIR_MODELS]:
-    _d.mkdir(exist_ok=True, parents=True)
 
 # =============================================================================
 # 性能

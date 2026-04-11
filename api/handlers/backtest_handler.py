@@ -16,9 +16,8 @@ from pathlib import Path
 
 from loguru import logger
 
-# 项目根目录
-_ROOT      = Path(__file__).parent.parent.parent
-_PROJS_DIR = _ROOT / 'data' / 'projs'
+# 项目根目录（默认值，正常通过 BacktestHandler(root_path=...) 注入）
+_DEFAULT_ROOT = Path(__file__).parent.parent.parent
 
 
 # ── 任务状态存储（内存，进程级别）───────────────────────────────────────────────
@@ -79,22 +78,29 @@ def _run_backtest(task_id: str, toml_path: Path):
         _update_task(task_id, status='error', error=err)
 
 
-def _list_toml_files() -> list:
-    if not _PROJS_DIR.exists():
-        return []
-    return sorted(_PROJS_DIR.glob('*.toml'))
-
-
 # ── Handler 类 ────────────────────────────────────────────────────────────────
 
 class BacktestHandler:
+
+    def __init__(self, root_path: Path = None):
+        """
+        :param root_path: 项目根目录（由 create_app 注入，避免脆弱的 __file__ 上溯）。
+                          未传时退回到 _DEFAULT_ROOT（3层上溯），兼容直接实例化场景。
+        """
+        root = Path(root_path) if root_path is not None else _DEFAULT_ROOT
+        self._projs_dir = root / 'data' / 'projs'
+
+    def _list_toml_files(self) -> list:
+        if not self._projs_dir.exists():
+            return []
+        return sorted(self._projs_dir.glob('*.toml'))
 
     def handle_list(self) -> dict:
         """GET /api/backtest/list → {strategies: [{name, file}]}"""
         return {
             'strategies': [
                 {'name': f.stem, 'file': f.name}
-                for f in _list_toml_files()
+                for f in self._list_toml_files()
             ]
         }
 
@@ -109,7 +115,7 @@ class BacktestHandler:
         if not toml_name:
             return 400, {'error': '缺少 toml_name 字段'}
 
-        toml_path = _PROJS_DIR / toml_name
+        toml_path = self._projs_dir / toml_name
         if not toml_path.exists():
             return 404, {'error': f'找不到策略文件: {toml_name}'}
 

@@ -26,7 +26,19 @@ from loguru import logger
 from api.app import create_app
 
 
+def _ensure_data_dirs():
+    """确保 data/ 下各子目录存在（启动时创建，不在 config 导入时触发）。"""
+    from config import DATA_DIR, DATA_DIR_CSVS, DATA_DIR_PRJ, DATA_DIR_MODELS
+    for d in [DATA_DIR, DATA_DIR_CSVS, DATA_DIR_PRJ, DATA_DIR_MODELS]:
+        d.mkdir(exist_ok=True, parents=True)
+
+
 def main():
+    _ensure_data_dirs()
+
+    from orm_models.api import init_db
+    init_db()
+
     parser = argparse.ArgumentParser(description='量化投研平台 Web 服务')
     parser.add_argument('--port',         type=int, default=8888)
     parser.add_argument('--no-stockpool', action='store_true')
@@ -36,7 +48,7 @@ def main():
     if not args.no_stockpool:
         xlsx_path = str(ROOT / 'stockpool.xlsx')
 
-    app = create_app(xlsx_path=xlsx_path)
+    app = create_app(xlsx_path=xlsx_path, root_path=ROOT)
 
     dist_exists = (ROOT / 'frontend' / 'dist').exists()
 

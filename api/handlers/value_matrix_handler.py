@@ -22,7 +22,7 @@ import pandas as pd
 from loguru import logger
 
 from api.cache import value_cache
-from api.handlers.chart_handler import load_stockpool
+from api.stockpool import load_stockpool
 
 
 # ── 常量 ──────────────────────────────────────────────────────────────────────
@@ -88,7 +88,7 @@ def fetch_fina_data(symbols: list, year: int) -> pd.DataFrame:
                                         'grossprofit_margin', 'netprofit_margin', 'or_yoy'])
 
     logger.info(f"{year} 年报数据拉取完成：{len(result)} 条有效记录")
-    value_cache.set(raw_cache_key, result)
+    value_cache.set(raw_cache_key, result, ttl=3600)  # 财务数据缓存1小时
     return result
 
 
@@ -207,7 +207,7 @@ class ValueMatrixHandler:
                 'count':      len(stocks),
                 'year_range': [years[0], years[-1]],   # [2021, 2025]
             }
-            value_cache.set(chart_cache_key, result)
+            value_cache.set(chart_cache_key, result, ttl=3600)
             logger.info(f"handle_data_api：近{MULTI_YEAR_COUNT}年({years[0]}-{years[-1]}) {metric}，有效数据 {len(stocks)} 条")
             return 200, result
 
@@ -230,7 +230,7 @@ class ValueMatrixHandler:
             })
 
         result = {'stocks': stocks, 'count': len(stocks)}
-        value_cache.set(chart_cache_key, result)
+        value_cache.set(chart_cache_key, result, ttl=3600)
         logger.info(f"handle_data_api：{year} 年 {metric}，有效数据 {len(stocks)} 条")
         return 200, result
 
