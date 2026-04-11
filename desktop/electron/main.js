@@ -18,7 +18,9 @@ const http  = require('http')
 
 // ── 配置 ──────────────────────────────────────────────────────────────────────
 const BACKEND_PORT   = 8888
-const HEALTH_URL     = `http://localhost:${BACKEND_PORT}/api/health`
+const VITE_PORT      = 5173
+// 明确用 127.0.0.1，避免 macOS 将 localhost 解析为 IPv6 (::1) 导致连接失败
+const HEALTH_URL     = `http://127.0.0.1:${BACKEND_PORT}/api/health`
 const HEALTH_TIMEOUT = 60000   // 最多等待 60s（首次启动需要加载股票池）
 const HEALTH_POLL_MS = 400     // 轮询间隔
 
@@ -30,7 +32,19 @@ let backendProcess = null
 let splashWindow   = null
 
 
-// ── 0. 清理残留后端进程（避免 DuckDB 文件锁冲突） ────────────────────────────
+// ── 0a. 检测 Vite 开发服务器是否在运行 ───────────────────────────────────────
+
+function checkViteRunning() {
+  return new Promise(resolve => {
+    http.get(`http://127.0.0.1:${VITE_PORT}`, res => {
+      res.resume()
+      resolve(res.statusCode < 500)
+    }).on('error', () => resolve(false))
+  })
+}
+
+
+// ── 0b. 清理残留后端进程（避免 DuckDB 文件锁冲突） ───────────────────────────
 
 function killOldBackend() {
   try {
@@ -178,7 +192,15 @@ function createWindow() {
   })
 
   if (isDev) {
-    mainWindow.loadURL(`http://localhost:5173`)
+    // 优先使用 Vite 热更新服务（需另开终端 npm run dev）；
+    // 若 Vite 未运行，则直接加载 Flask 托管的构建产物。
+    checkViteRunning().then(viteUp => {
+      const url = viteUp
+        ? `http://127.0.0.1:${VITE_PORT}`
+        : `http://127.0.0.1:${BACKEND_PORT}`
+      console.log(`[electron] 加载前端：${url}`)
+      mainWindow.loadURL(url)
+    })
     mainWindow.webContents.openDevTools()
   } else {
     mainWindow.loadFile(path.join(__dirname, '../frontend/dist/index.html'))
@@ -302,11 +324,19 @@ app.whenReady().then(async () => {
       return
     }
   } else {
-    // 开发模式：也尝试启动后端（如果尚未启动）
+    // 开发模式：启动后端并等待就绪（与生产模式相同的等待逻辑）
+    createSplash()
     startBackend()
-    await waitForBackend().catch(() => {
-      console.warn('[dev] 后端未就绪，请确认 python run.py 已启动')
-    })
+    try {
+      await waitForBackend()
+    } catch (err) {
+      console.warn(`[dev] 后端未就绪：${err.message}`)
+      // dev 模式不强制退出，窗口仍然打开（可能 API 调用会失败，便于调试）
+      if (splashWindow && !splashWindow.isDestroyed()) {
+        splashWindow.close()
+        splashWindow = null
+      }
+    }
   }
 
   createWindow()
