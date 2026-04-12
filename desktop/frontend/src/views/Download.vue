@@ -272,13 +272,14 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
 }
 
 /* ── 分组 ── */
-.category-section { margin-bottom: var(--space-6); }
+.category-section { margin-bottom: var(--space-4); }
 
 .category-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-2) var(--space-3);
+  height: 32px;
+  padding: 0 var(--space-3);
   background: var(--bg-secondary);
   border-radius: var(--radius-sm);
   margin-bottom: var(--space-2);
@@ -315,7 +316,8 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  height: 32px;
+  padding: 0 var(--space-4);
   cursor: pointer;
   border-bottom: 1px solid var(--separator);
   transition: background .12s;
@@ -330,15 +332,17 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
 .row-main { flex: 1; min-width: 0; }
 
 .row-label {
-  font-size: var(--size-body);
+  font-size: var(--size-sm);
   font-weight: 500;
   color: var(--label);
+  line-height: 1.2;
 }
 
 .row-desc {
-  font-size: var(--size-xs);
+  font-size: 11px;
   color: var(--label-muted);
   margin-top: 2px;
+  line-height: 1.2;
 }
 
 .row-meta {
@@ -492,17 +496,18 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
   background: var(--bg-secondary);
   border-radius: var(--radius-sm);
   padding: var(--space-3);
-  max-height: 320px;
+  max-height: 200px;
   overflow-y: auto;
   font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--label-secondary);
 }
 
 .log-line {
-  line-height: 1.6;
+  line-height: 1.4;
   white-space: pre-wrap;
   word-break: break-all;
+  padding: 2px 0;
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }

@@ -42,7 +42,7 @@ pro = _LazyPro()
 WORKDIR  = Path(__file__).parent
 DATA_DIR = WORKDIR / 'data'
 
-DB_URI = 'postgresql://username@localhost:5432/stockanalysis'  # 替换 username 为实际用户名
+DB_URI = 'postgresql://apple@localhost:5432/stockanalysis'
 # DB_URI = f'duckdb:///{DATA_DIR}/duck.db'  # 旧 DuckDB
 
 # =============================================================================

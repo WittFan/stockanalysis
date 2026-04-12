@@ -73,22 +73,18 @@
   --shadow-sm:      0 2px 8px rgba(0,0,0,.08);
   --shadow:         0 4px 16px rgba(0,0,0,.10);
 
-  /* ── 字体缩放因子（由 useFontScale.js 自动写入 / 用户手动调节） ── */
-  --font-scale:     1.15;         /* 默认 medium 档，可选 1.00 / 1.15 / 1.32 */
-
-  /* 排版比例（Apple HIG font scale，1pt ≈ 1px @1x）
-     所有字号乘以 --font-scale，实现全局等比缩放               */
+  /* 排版比例（Apple HIG font scale，1pt ≈ 1px @1x） */
   --font-stack:     -apple-system, 'SF Pro Display', 'SF Pro Text',
                     'Helvetica Neue', Helvetica, Arial, sans-serif;
-  --size-xs:        calc(11px * var(--font-scale));   /* caption / tab labels */
-  --size-sm:        calc(13px * var(--font-scale));   /* footnote / secondary */
-  --size-body:      calc(15px * var(--font-scale));   /* body */
-  --size-callout:   calc(16px * var(--font-scale));   /* callout */
-  --size-headline:  calc(17px * var(--font-scale));   /* headline / button */
-  --size-title3:    calc(20px * var(--font-scale));   /* title3 */
-  --size-title2:    calc(22px * var(--font-scale));   /* title2 */
-  --size-title1:    calc(28px * var(--font-scale));   /* title1 */
-  --size-large:     calc(34px * var(--font-scale));   /* largeTitle */
+  --size-xs:        11px;                /* caption / tab labels */
+  --size-sm:        13px;                /* footnote / secondary */
+  --size-body:      15px;                /* body */
+  --size-callout:   16px;                /* callout */
+  --size-headline:  17px;                /* headline / button */
+  --size-title3:    20px;                /* title3 */
+  --size-title2:    22px;                /* title2 */
+  --size-title1:    28px;                /* title1 */
+  --size-large:     34px;                /* largeTitle */
 
   /* 字间距（Apple 规范：大字负间距，小字正间距） */
   --tracking-tight: -0.022em;
