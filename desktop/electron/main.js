@@ -180,12 +180,18 @@ function createSplash() {
 // ── 4. 主窗口 ─────────────────────────────────────────────────────────────────
 
 function createWindow() {
+  const iconPath = path.join(__dirname, 'icons',
+    process.platform === 'darwin' ? 'icon.icns'
+    : process.platform === 'win32' ? 'icon.ico'
+    : 'icon.png')
+
   mainWindow = new BrowserWindow({
     width:   1280,
     height:  800,
     minWidth:  900,
     minHeight: 600,
     show: false,   // 加载完成后再显示，避免白屏闪烁
+    icon: iconPath,
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     // macOS 交通灯按钮纵向居中在 44px 导航栏内（(44-16)/2 ≈ 14）
     // 横向 16px 与导航栏左侧 padding 对齐
@@ -311,6 +317,11 @@ function registerIpcHandlers() {
 // ── 7. 应用生命周期 ───────────────────────────────────────────────────────────
 
 app.whenReady().then(async () => {
+  // macOS：设置 Dock 图标
+  if (process.platform === 'darwin' && app.dock) {
+    app.dock.setIcon(path.join(__dirname, 'icons', 'icon.png'))
+  }
+
   buildMenu()
   registerIpcHandlers()
 

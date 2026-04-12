@@ -33,10 +33,12 @@ def create_app(xlsx_path: str = None, root_path: Path = None) -> Flask:
     from api.handlers.chart_handler import ChartHandler
     from api.handlers.backtest_handler import BacktestHandler
     from api.handlers.value_matrix_handler import ValueMatrixHandler
+    from api.handlers.download_handler import DownloadHandler
 
     chart_handler    = ChartHandler()
     backtest_handler = BacktestHandler(root_path=root_path)
     value_handler    = ValueMatrixHandler()
+    download_handler = DownloadHandler()
 
     if xlsx_path and Path(xlsx_path).exists():
         chart_handler.init(xlsx_path)
@@ -50,11 +52,13 @@ def create_app(xlsx_path: str = None, root_path: Path = None) -> Flask:
     from api.routes.backtest import make_backtest_bp
     from api.routes.value import make_value_bp
     from api.routes.health import bp as health_bp
+    from api.routes.download import make_download_bp
 
     app.register_blueprint(make_chart_bp(chart_handler),       url_prefix='/api')
     app.register_blueprint(make_backtest_bp(backtest_handler),  url_prefix='/api')
     app.register_blueprint(make_value_bp(value_handler),        url_prefix='/api')
     app.register_blueprint(health_bp,                           url_prefix='/api')
+    app.register_blueprint(make_download_bp(download_handler),  url_prefix='/api')
 
     # ── SPA fallback（生产模式：Flask 托管前端静态文件）──────────────────────
     if dist_dir.exists():

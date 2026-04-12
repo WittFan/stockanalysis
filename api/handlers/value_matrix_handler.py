@@ -27,7 +27,7 @@ from api.stockpool import load_stockpool
 
 # ── 常量 ──────────────────────────────────────────────────────────────────────
 
-AVAILABLE_YEARS  = [2024, 2023, 2022, 2021, 2020]
+AVAILABLE_YEARS  = list(range(datetime.date.today().year - 1, datetime.date.today().year - 6, -1))
 DEFAULT_YEAR     = 2024
 MULTI_YEAR_KEY   = '5y'              # 近5年模式的参数值
 MULTI_YEAR_COUNT = 5                 # 近N年
@@ -174,7 +174,12 @@ class ValueMatrixHandler:
             product = 1.0
             for f in g_factors:
                 product *= f
-            cagr = (product ** (1.0 / len(g_factors)) - 1.0) * 100.0
+            # 负乘积时保留符号再开方（奇数次根对负数合法）
+            n = len(g_factors)
+            if product < 0:
+                cagr = -((-product) ** (1.0 / n) + 1.0) * 100.0
+            else:
+                cagr = (product ** (1.0 / n) - 1.0) * 100.0
 
             stocks.append({
                 'code': ts_code,

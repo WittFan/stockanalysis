@@ -15,6 +15,7 @@
     <RouterLink to="/industry" class="nav-btn" :class="{ active: route.path === '/industry' }">行业分组</RouterLink>
     <RouterLink to="/backtest" class="nav-btn" :class="{ active: route.path === '/backtest' }">回测</RouterLink>
     <RouterLink to="/value"    class="nav-btn" :class="{ active: route.path === '/value' }">价值坐标系</RouterLink>
+    <RouterLink to="/download" class="nav-btn" :class="{ active: route.path === '/download' }">数据管理</RouterLink>
 
     <!-- 字体大小切换（右侧对齐） -->
     <div class="font-ctrl">

@@ -28,7 +28,15 @@
         </div>
       </div>
 
-      <!-- 竞争力指标 -->
+      <!-- 景气度指标（Y 轴） -->
+      <div class="ctrl-section">
+        <div class="section-label">景气度指标（Y 轴）</div>
+        <div class="year-list">
+          <button class="year-btn active">营收增长率</button>
+        </div>
+      </div>
+
+      <!-- 竞争力指标（X 轴） -->
       <div class="ctrl-section">
         <div class="section-label">竞争力指标（X 轴）</div>
         <div class="radio-group">
@@ -107,9 +115,11 @@ const fcStocks  = ref([])
 let fcTimer = null
 
 const chartOption = computed(() => {
-  const xLabel     = metric.value === 'gross' ? '销售毛利率(%)' : '销售净利率(%)'
   const metricName = metric.value === 'gross' ? '销售毛利率' : '销售净利率'
   const is5y       = year.value === '5y'
+  const xLabel     = is5y && mode.value === 'past'
+    ? `近5年${metricName}（算数平均）(%)`
+    : `${metricName}(%)`
 
   let titleText
   if (mode.value === 'forecast') {
@@ -122,9 +132,8 @@ const chartOption = computed(() => {
     titleText = `价值坐标系 · ${year.value} 年报 · ${metricName}`
   }
 
-  // 近5年模式 Y 轴说明更精确
   const yAxisName = is5y && mode.value === 'past'
-    ? '营收 CAGR（%，近5年几何平均）'
+    ? '近5年营收增长率（几何平均）(%)'
     : '营业收入同比增长率(%)'
 
   return {

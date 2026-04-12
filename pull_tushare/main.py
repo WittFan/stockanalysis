@@ -54,6 +54,29 @@ def manual_start():
         # sqlite锁问题未解决，先用一个线程
         pool.map(action, detail_list)
 
+    ###### 三、财务数据（串行，避免Tushare API频率超限）
+    logger.info(' 5.财务数据更新（VIP批量接口）')
+    financial_vip_list = [
+        IncomeStatementTushare, BalanceSheetTushare, CashFlowTushare,
+        FinaIndicatorTushare, ForecastTushare, ExpressTushare,
+        FinaMainbzTushare, DisclosureDateTushare,
+    ]
+    for cls in financial_vip_list:
+        try:
+            cls().pull()
+            logger.info(f'财务 {cls.__name__} 完成')
+        except Exception as e:
+            logger.error(f'财务 {cls.__name__} 遇到错误: {e}')
+
+    logger.info(' 6.财务数据更新（标准接口，按ts_code遍历）')
+    financial_std_list = [DividendTushare, FinaAuditTushare]
+    for cls in financial_std_list:
+        try:
+            cls().pull()
+            logger.info(f'财务 {cls.__name__} 完成')
+        except Exception as e:
+            logger.error(f'财务 {cls.__name__} 遇到错误: {e}')
+
 
 if __name__ == "__main__":
     manual_start()
