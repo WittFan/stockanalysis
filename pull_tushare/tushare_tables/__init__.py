@@ -15,6 +15,7 @@ from pull_tushare.tushare_tables.detail_data_base import *
 from pull_tushare.tushare_tables.trade_cal_tushare import *
 # 财务数据
 from pull_tushare.tushare_tables.financial_vip_base import *
+from pull_tushare.tushare_tables.financial_by_code_base import *
 from pull_tushare.tushare_tables.income_tushare import *
 from pull_tushare.tushare_tables.balance_sheet_tushare import *
 from pull_tushare.tushare_tables.cash_flow_tushare import *

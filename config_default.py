@@ -42,7 +42,8 @@ pro = _LazyPro()
 WORKDIR  = Path(__file__).parent
 DATA_DIR = WORKDIR / 'data'
 
-DB_URI = f'duckdb:///{DATA_DIR}/duck.db'
+DB_URI = 'postgresql://username@localhost:5432/stockanalysis'  # 替换 username 为实际用户名
+# DB_URI = f'duckdb:///{DATA_DIR}/duck.db'  # 旧 DuckDB
 
 # =============================================================================
 # 数据目录路径常量（目录由 run.py 在启动时创建，不在导入时创建）

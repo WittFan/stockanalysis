@@ -109,10 +109,17 @@ class FinancialVipBase:
         """
         按主键 upsert：DELETE 已存在的行，再 INSERT 新数据。
         支持 update_flag 数据修正场景。
+        写入前自动过滤 API 返回但表中不存在的多余列。
         """
         if df.empty:
             return
         table_name = self.to_table.__tablename__
+        # 过滤列：只保留目标表中存在的列，丢弃 API 多余字段
+        table_cols = {c.name for c in self.to_table.__table__.columns}
+        extra_cols = set(df.columns) - table_cols
+        if extra_cols:
+            loguru_logger.debug(f'{table_name} 丢弃 API 多余列: {extra_cols}')
+            df = df[[c for c in df.columns if c in table_cols]]
         pk_values = df[self.pk_col_name].tolist()
         # 分批删除（避免 IN 子句过大）
         batch = 500
@@ -217,11 +224,15 @@ class FinancialVipBase:
     def pull(self):
         """
         自动模式：
-          - 若 UpdateRecord 无该表记录 → pull_initial（全量）
-          - 否则 → pull_incremental（增量）
+          - 若还有未完成的历史 period → pull_initial（全量/续传）
+          - 若所有历史 period 已完成 → pull_incremental（增量）
         """
+        all_periods = self._gen_period_list()
         done_periods = self._get_done_periods()
-        if not done_periods:
+        pending = [p for p in all_periods if p not in done_periods]
+
+        if pending:
+            # 全量未完成（首次或中断续传），继续下载剩余 period
             self.pull_initial()
         else:
             self.pull_incremental()
