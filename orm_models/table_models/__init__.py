@@ -12,3 +12,4 @@ from orm_models.table_models.reports import *
 from orm_models.table_models.stock_info import *
 from orm_models.table_models.stock_trade import *
 from orm_models.table_models.update_info import *
+from orm_models.table_models.financial import *

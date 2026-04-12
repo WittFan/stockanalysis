@@ -54,6 +54,21 @@ def manual_start():
         # sqlite锁问题未解决，先用一个线程
         pool.map(action, detail_list)
 
+    ###### 三、财务报表数据更新（按季度报告期，串行下载避免触发频率限制）
+    logger.info(' 5.财务报表数据更新（利润表、现金流量表、资产负债表、财务指标）')
+    financial_list = [
+        IncomeStatementTushare,
+        CashFlowTushare,
+        BalanceSheetTushare,
+        FinaIndicatorTushare,
+    ]
+    for cls in financial_list:
+        try:
+            cls().pull()
+            logger.info(f'{cls.__name__} 下载完成')
+        except Exception as e:
+            logger.error(f'{cls.__name__} 下载失败: {e}')
+
 
 if __name__ == "__main__":
     manual_start()

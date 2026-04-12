@@ -13,3 +13,8 @@ from pull_tushare.tushare_tables.index_member_tushare import *
 from pull_tushare.tushare_tables.stock_basic_tushare import *
 from pull_tushare.tushare_tables.detail_data_base import *
 from pull_tushare.tushare_tables.trade_cal_tushare import *
+from pull_tushare.tushare_tables.financial_vip_base import *
+from pull_tushare.tushare_tables.income_tushare import *
+from pull_tushare.tushare_tables.cash_flow_tushare import *
+from pull_tushare.tushare_tables.balance_sheet_tushare import *
+from pull_tushare.tushare_tables.fina_indicator_tushare import *
