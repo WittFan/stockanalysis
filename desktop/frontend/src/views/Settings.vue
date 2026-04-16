@@ -105,33 +105,71 @@
       <div class="card settings-card">
         <div class="card-section-title">虚拟形象</div>
 
-        <div class="field-row">
-          <div class="field-label">VRM 模型</div>
+        <div class="field-row field-row--top">
+          <div class="field-label">模型预设</div>
           <div class="field-control">
-            <input
-              type="text"
-              v-model="form.vrmUrl"
-              placeholder="https://... 或留空使用内置示例模型"
-              class="text-input"
-            />
-            <div class="field-hint">
-              支持远程 URL 或本地文件路径。当前已内置
-              <strong>VRoid Studio 女性素体</strong>
-              （含 52 BlendShapes），留空即可使用。也可从
-              <a href="https://hub.vroid.com" target="_blank" class="field-link">VRoid Hub</a>
-              下载其他免费 VRM 角色，粘贴直链或选择本地文件。
+            <div class="vrm-preset-grid">
+              <button
+                v-for="p in VRM_PRESETS"
+                :key="p.id"
+                class="vrm-preset-btn"
+                :class="{ active: form.vrmPreset === p.id }"
+                @click="form.vrmPreset = p.id"
+                :title="p.desc"
+              >
+                <span class="vrm-preset-icon">{{ p.icon }}</span>
+                <span class="vrm-preset-name">{{ p.label }}</span>
+              </button>
             </div>
           </div>
         </div>
 
         <div class="field-row">
-          <div class="field-label">本地文件</div>
+          <div class="field-label">场景主题</div>
           <div class="field-control">
-            <label class="file-btn">
-              <input type="file" accept=".vrm" style="display:none" @change="onVrmFile" />
-              📂 选择 .vrm 文件
-            </label>
-            <span v-if="vrmFileName" class="vrm-file-name">{{ vrmFileName }}</span>
+            <select v-model="form.scenePreset" class="select-input">
+              <option v-for="s in SCENE_PRESETS" :key="s.id" :value="s.id">{{ s.label }}</option>
+            </select>
+            <div class="field-hint">
+              <span v-if="form.scenePreset === 'auto'">
+                自动：官方示例使用深色空间，VRoid 素体使用明亮空间。
+              </span>
+              <span v-else-if="form.scenePreset === 'dark'">深邃星空背景，适合科技感形象。</span>
+              <span v-else>纯白明亮背景，更适合展示角色肤色与服装。</span>
+            </div>
+          </div>
+        </div>
+
+        <template v-if="form.vrmPreset === 'custom'">
+          <div class="field-row">
+            <div class="field-label">VRM 链接</div>
+            <div class="field-control">
+              <input
+                type="text"
+                v-model="form.vrmUrl"
+                placeholder="https://..."
+                class="text-input"
+              />
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-label">本地文件</div>
+            <div class="field-control">
+              <label class="file-btn">
+                <input type="file" accept=".vrm" style="display:none" @change="onVrmFile" />
+                📂 选择 .vrm 文件
+              </label>
+              <span v-if="vrmFileName" class="vrm-file-name">{{ vrmFileName }}</span>
+            </div>
+          </div>
+        </template>
+        <div v-else class="field-row">
+          <div class="field-label"></div>
+          <div class="field-control">
+            <div class="field-hint">
+              {{ VRM_PRESETS.find(p => p.id === form.vrmPreset)?.desc }}
+            </div>
           </div>
         </div>
 
@@ -180,8 +218,22 @@ const form = reactive({
   apiUrl: 'https://api.openai.com/v1',
   model: 'gpt-4o',
   systemPrompt: DEFAULT_SYSTEM_PROMPT,
+  vrmPreset: 'official',   // official | vroid_base | custom
+  scenePreset: 'auto',     // auto | dark | light
   vrmUrl: '',
 })
+
+const VRM_PRESETS = [
+  { id: 'official',    label: '官方示例',  icon: '🧍', desc: 'three-vrm 默认模型' },
+  { id: 'vroid_base',  label: 'VRoid 素体', icon: '👩', desc: 'VRoid Studio 女性素体' },
+  { id: 'custom',      label: '自定义',    icon: '🔧', desc: '粘贴 URL 或选择本地文件' },
+]
+
+const SCENE_PRESETS = [
+  { id: 'auto',  label: '自动（跟随模型）' },
+  { id: 'dark',  label: '深色空间' },
+  { id: 'light', label: '明亮空间' },
+]
 
 const isTesting = ref(false)
 const testResult = ref(null)
@@ -346,6 +398,8 @@ function onVrmFile(e) {
 
 function saveVrmSettings() {
   const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+  data.vrmPreset = form.vrmPreset
+  data.scenePreset = form.scenePreset
   data.vrmUrl = form.vrmUrl
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
   vrmSaveStatus.value = '已保存，切换到助理页面生效'
@@ -577,6 +631,40 @@ onMounted(() => {
   font-family: inherit; transition: all .15s;
 }
 .file-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.vrm-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+.vrm-preset-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--space-2) var(--space-1);
+  border: 1px solid var(--separator-opaque);
+  border-radius: var(--radius);
+  background: var(--bg-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.vrm-preset-btn:hover {
+  border-color: var(--accent);
+  background: rgba(0, 122, 255, 0.05);
+}
+.vrm-preset-btn.active {
+  border-color: var(--accent);
+  background: rgba(0, 122, 255, 0.08);
+}
+.vrm-preset-icon { font-size: 20px; }
+.vrm-preset-name {
+  font-size: var(--size-xs);
+  color: var(--label-2);
+  font-weight: 500;
+}
+.vrm-preset-btn.active .vrm-preset-name { color: var(--accent); }
 
 .vrm-file-name {
   margin-left: 10px; font-size: var(--size-xs);

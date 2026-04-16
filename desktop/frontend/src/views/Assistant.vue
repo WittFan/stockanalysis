@@ -2,7 +2,7 @@
   <div class="agent-view">
 
     <!-- ── 左：3D 角色 ─────────────────────────────────── -->
-    <div class="character-panel" ref="containerRef">
+    <div class="character-panel" ref="containerRef" :style="sceneCssVars">
       <canvas ref="canvasRef" class="three-canvas" />
 
       <!-- VRM 加载中 -->
@@ -169,15 +169,137 @@ import { VRMLoaderPlugin, VRMUtils, VRMExpressionPresetName, VRMHumanBoneName } 
 
 const STORAGE_KEY = 'assistant_settings'
 
-// 默认优先加载本地 VRM（如果不存在会自动 fallback）
-const LOCAL_VRM_URL = window.electronAPI?.isElectron
-  ? './models/vroid_female.vrm'
-  : '/models/vroid_female.vrm'
+// 模型预设映射
+const VRM_PRESET_URLS = {
+  official:   'https://cdn.jsdelivr.net/gh/pixiv/three-vrm@3.5.1/packages/three-vrm/examples/models/VRM1_Constraint_Twist_Sample.vrm',
+  vroid_base: window.electronAPI?.isElectron
+    ? './models/vroid_female.vrm'
+    : '/models/vroid_female.vrm',
+}
 
-// 当本地模型缺失时的 fallback（three-vrm 官方示例模型）
-const FALLBACK_VRM_URL = 'https://cdn.jsdelivr.net/gh/pixiv/three-vrm@3.5.1/packages/three-vrm/examples/models/VRM1_Constraint_Twist_Sample.vrm'
+function getDefaultVrmUrl() {
+  const settings = loadSettings()
+  const preset = settings.vrmPreset || 'official'
+  if (preset === 'custom') return settings.vrmUrl || ''
+  return VRM_PRESET_URLS[preset] || VRM_PRESET_URLS.official
+}
 
-const DEFAULT_VRM_URL = LOCAL_VRM_URL
+function getVrmPreset() {
+  return loadSettings().vrmPreset || 'official'
+}
+
+function getScenePreset() {
+  const settings = loadSettings()
+  const scene = settings.scenePreset || 'auto'
+  if (scene !== 'auto') return scene
+  // auto 映射：official -> dark, vroid_base -> light
+  const vrm = settings.vrmPreset || 'official'
+  return vrm === 'vroid_base' ? 'light' : 'dark'
+}
+
+// 场景配置表
+const SCENE_CONFIGS = {
+  dark: {
+    bg: 0x0d0d1a,
+    fog: { color: 0x0d0d1a, density: 0.04 },
+    exposure: 1.2,
+    ambient: { color: 0x303050, intensity: 1.0 },
+    key: { color: 0xfff0e0, intensity: 2.5, pos: [1.5, 3, 2] },
+    fill: { color: 0x8040ff, intensity: 2.5, pos: [-2, 2, -1], type: 'point', distance: 8 },
+    rim: { color: 0x4090ff, intensity: 1.2, pos: [0, 2.5, -2], type: 'point', distance: 6 },
+    front: { color: 0xffe8f0, intensity: 0.8, pos: [0, 1.5, 2.5], type: 'point', distance: 5 },
+    diskColor: 0x6030ff,
+    diskOpacity: 0.1,
+    particleColor: 0x9070ff,
+    particleOpacity: 0.6,
+    panelBg: '#0d0d1a',
+    overlayBg: 'rgba(13, 13, 26, 0.85)',
+    overlayBgError: 'rgba(13, 13, 26, 0.92)',
+    overlayText: 'rgba(255,255,255,0.7)',
+    progressBg: 'rgba(255,255,255,0.1)',
+    errColor: '#ff9090',
+    btnColor: '#c090ff',
+    btnBg: 'rgba(160,100,255,0.12)',
+    btnBorder: 'rgba(160,100,255,0.5)',
+    btnHoverBg: 'rgba(160,100,255,0.25)',
+    hintColor: 'rgba(255,255,255,0.3)',
+    animBg: 'rgba(13,13,30,.6)',
+    animBorder: 'rgba(255,255,255,.1)',
+    animHover: 'rgba(255,255,255,.1)',
+    animActive: 'rgba(160,100,255,.35)',
+    badgeBg: 'rgba(13,13,30,.75)',
+    badgeBorder: 'rgba(255,255,255,.12)',
+    badgeName: 'rgba(255,255,255,.9)',
+    badgeStatus: 'rgba(255,255,255,.5)',
+    tipBg: 'rgba(255,80,80,.18)',
+    tipBorder: 'rgba(255,80,80,.4)',
+    tipColor: '#ff9090',
+  },
+  light: {
+    bg: 0xffffff,
+    exposure: 1.8,
+    ambient: { color: 0xffffff, intensity: 1.4 },
+    key: { color: 0xfff5e8, intensity: 3.2, pos: [1.2, 3, 1.8] },
+    fill: { color: 0xe8f4ff, intensity: 1.6, pos: [-1.5, 2, 1.5], type: 'directional' },
+    rim: { color: 0xffd1b3, intensity: 1.0, pos: [0, 2, -2], type: 'directional' },
+    front: { color: 0xffffff, intensity: 0.9, pos: [0, 1.2, 2.2], type: 'point', distance: 5 },
+    diskColor: 0xd0d0e0,
+    diskOpacity: 0.15,
+    particleColor: 0xa090c0,
+    particleOpacity: 0.25,
+    panelBg: '#ffffff',
+    overlayBg: 'rgba(255, 255, 255, 0.88)',
+    overlayBgError: 'rgba(255, 255, 255, 0.95)',
+    overlayText: 'rgba(60,60,80,0.8)',
+    progressBg: 'rgba(0,0,0,0.08)',
+    errColor: '#c04040',
+    btnColor: '#7030a0',
+    btnBg: 'rgba(160,100,255,0.12)',
+    btnBorder: 'rgba(160,100,255,0.5)',
+    btnHoverBg: 'rgba(160,100,255,0.22)',
+    hintColor: 'rgba(80,80,100,0.5)',
+    animBg: 'rgba(255,255,255,.7)',
+    animBorder: 'rgba(0,0,0,.08)',
+    animHover: 'rgba(0,0,0,.05)',
+    animActive: 'rgba(160,100,255,.25)',
+    badgeBg: 'rgba(255,255,255,.85)',
+    badgeBorder: 'rgba(0,0,0,.1)',
+    badgeName: 'rgba(40,40,60,.9)',
+    badgeStatus: 'rgba(80,80,100,.6)',
+    tipBg: 'rgba(255,80,80,.12)',
+    tipBorder: 'rgba(255,80,80,.3)',
+    tipColor: '#c04040',
+  }
+}
+
+const effectiveScenePreset = computed(() => getScenePreset())
+const sceneCssVars = computed(() => {
+  const cfg = SCENE_CONFIGS[effectiveScenePreset.value]
+  return {
+    '--panel-bg': cfg.panelBg,
+    '--overlay-bg': cfg.overlayBg,
+    '--overlay-bg-error': cfg.overlayBgError,
+    '--overlay-text': cfg.overlayText,
+    '--progress-bg': cfg.progressBg,
+    '--err-color': cfg.errColor,
+    '--btn-color': cfg.btnColor,
+    '--btn-bg': cfg.btnBg,
+    '--btn-border': cfg.btnBorder,
+    '--btn-hover-bg': cfg.btnHoverBg,
+    '--hint-color': cfg.hintColor,
+    '--anim-bg': cfg.animBg,
+    '--anim-border': cfg.animBorder,
+    '--anim-hover': cfg.animHover,
+    '--anim-active': cfg.animActive,
+    '--badge-bg': cfg.badgeBg,
+    '--badge-border': cfg.badgeBorder,
+    '--badge-name': cfg.badgeName,
+    '--badge-status': cfg.badgeStatus,
+    '--tip-bg': cfg.tipBg,
+    '--tip-border': cfg.tipBorder,
+    '--tip-color': cfg.tipColor,
+  }
+})
 
 // ── 对话状态 ──────────────────────────────────────────────
 const containerRef    = ref(null)
@@ -524,10 +646,15 @@ const lookAtTarget = new THREE.Object3D()
 function initThree() {
   const container = containerRef.value
   const w = container.clientWidth, h = container.clientHeight
+  const sceneCfg = SCENE_CONFIGS[effectiveScenePreset.value]
 
   scene = new THREE.Scene()
-  scene.background = new THREE.Color(0x0d0d1a)
-  scene.fog = new THREE.FogExp2(0x0d0d1a, 0.04)
+  scene.background = new THREE.Color(sceneCfg.bg)
+  if (sceneCfg.fog) {
+    scene.fog = new THREE.FogExp2(sceneCfg.fog.color, sceneCfg.fog.density)
+  } else {
+    scene.fog = null
+  }
 
   camera = new THREE.PerspectiveCamera(22, w / h, 0.1, 50)
   camera.position.set(0, 0.56, 2.0)
@@ -539,22 +666,29 @@ function initThree() {
   renderer.shadowMap.enabled = true
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 1.2
+  renderer.toneMappingExposure = sceneCfg.exposure
 
   // 灯光
-  scene.add(new THREE.AmbientLight(0x303050, 1.0))
-  const key = new THREE.DirectionalLight(0xfff0e0, 2.5)
-  key.position.set(1.5, 3, 2); key.castShadow = true; scene.add(key)
-  const fill = new THREE.PointLight(0x8040ff, 2.5, 8)
-  fill.position.set(-2, 2, -1); scene.add(fill)
-  const rim = new THREE.PointLight(0x4090ff, 1.2, 6)
-  rim.position.set(0, 2.5, -2); scene.add(rim)
-  const front = new THREE.PointLight(0xffe8f0, 0.8, 5)
-  front.position.set(0, 1.5, 2.5); scene.add(front)
+  scene.add(new THREE.AmbientLight(sceneCfg.ambient.color, sceneCfg.ambient.intensity))
+
+  const key = new THREE.DirectionalLight(sceneCfg.key.color, sceneCfg.key.intensity)
+  key.position.set(...sceneCfg.key.pos); key.castShadow = true; scene.add(key)
+
+  const makeLight = (cfg) => {
+    if (cfg.type === 'directional') {
+      const l = new THREE.DirectionalLight(cfg.color, cfg.intensity)
+      l.position.set(...cfg.pos); return l
+    }
+    const l = new THREE.PointLight(cfg.color, cfg.intensity, cfg.distance || 10)
+    l.position.set(...cfg.pos); return l
+  }
+  scene.add(makeLight(sceneCfg.fill))
+  scene.add(makeLight(sceneCfg.rim))
+  scene.add(makeLight(sceneCfg.front))
 
   // 地面光晕
   const diskGeo = new THREE.CircleGeometry(0.6, 48)
-  const diskMat = new THREE.MeshBasicMaterial({ color: 0x6030ff, transparent: true, opacity: 0.1 })
+  const diskMat = new THREE.MeshBasicMaterial({ color: sceneCfg.diskColor, transparent: true, opacity: sceneCfg.diskOpacity })
   const disk = new THREE.Mesh(diskGeo, diskMat)
   disk.rotation.x = -Math.PI / 2; disk.position.y = -0.01; scene.add(disk)
 
@@ -568,7 +702,7 @@ function initThree() {
   }
   const pGeo = new THREE.BufferGeometry()
   pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
-  scene.add(new THREE.Points(pGeo, new THREE.PointsMaterial({ color: 0x9070ff, size: 0.022, transparent: true, opacity: 0.6 })))
+  scene.add(new THREE.Points(pGeo, new THREE.PointsMaterial({ color: sceneCfg.particleColor, size: 0.022, transparent: true, opacity: sceneCfg.particleOpacity })))
 
   // lookAt 目标加入场景（放在模型前方 +Z 方向）
   lookAtTarget.position.set(0, 0.62, 2.2)
@@ -589,8 +723,7 @@ function initThree() {
   window._vrmResizeObs.observe(container)
 
   // 加载 VRM
-  const settings = loadSettings()
-  loadVRM(settings.vrmUrl || DEFAULT_VRM_URL)
+  loadVRM(getDefaultVrmUrl())
 }
 
 function onMouseMove(e) {
@@ -634,18 +767,30 @@ async function loadVRM(url) {
     VRMUtils.removeUnnecessaryVertices(gltf.scene)
     VRMUtils.combineSkeletons(gltf.scene)
 
-    // 部分 VRM 模型背对摄像机，需旋转 180° 使其面向镜头
-    vrm.scene.rotation.y = Math.PI
+    const vrmPreset = getVrmPreset()
 
-    // 修正 T-pose：将手臂下垂到自然姿态
-    const lShoulder = vrm.humanoid?.getNormalizedBoneNode(VRMHumanBoneName.LeftUpperArm)
-    const rShoulder = vrm.humanoid?.getNormalizedBoneNode(VRMHumanBoneName.RightUpperArm)
-    const lForearm  = vrm.humanoid?.getNormalizedBoneNode(VRMHumanBoneName.LeftLowerArm)
-    const rForearm  = vrm.humanoid?.getNormalizedBoneNode(VRMHumanBoneName.RightLowerArm)
-    if (lShoulder) lShoulder.rotation.z = -1.1   // 左臂向下
-    if (rShoulder) rShoulder.rotation.z =  1.1   // 右臂向下
-    if (lForearm)  lForearm.rotation.z  = -0.1   // 小幅弯曲前臂
-    if (rForearm)  rForearm.rotation.z  =  0.1
+    // 只有 VRoid 等背对摄像机的模型才需要旋转 180°
+    if (vrmPreset === 'vroid_base') {
+      vrm.scene.rotation.y = Math.PI
+    } else {
+      vrm.scene.rotation.y = 0
+    }
+
+    // 修正 T-pose：根据模型预设决定是否将手臂和手部下垂到自然姿态
+    if (vrmPreset === 'vroid_base') {
+      const lShoulder = vrm.humanoid?.getNormalizedBoneNode(VRMHumanBoneName.LeftUpperArm)
+      const rShoulder = vrm.humanoid?.getNormalizedBoneNode(VRMHumanBoneName.RightUpperArm)
+      const lForearm  = vrm.humanoid?.getNormalizedBoneNode(VRMHumanBoneName.LeftLowerArm)
+      const rForearm  = vrm.humanoid?.getNormalizedBoneNode(VRMHumanBoneName.RightLowerArm)
+      const lHand     = vrm.humanoid?.getNormalizedBoneNode(VRMHumanBoneName.LeftHand)
+      const rHand     = vrm.humanoid?.getNormalizedBoneNode(VRMHumanBoneName.RightHand)
+      if (lShoulder) lShoulder.rotation.z = -1.15   // 左臂向下
+      if (rShoulder) rShoulder.rotation.z =  1.15   // 右臂向下
+      if (lForearm)  lForearm.rotation.z  = -0.15  // 小幅弯曲前臂
+      if (rForearm)  rForearm.rotation.z  =  0.15
+      if (lHand)     { lHand.rotation.z = -0.15; lHand.rotation.y = -0.25 } // 手掌向内贴腿
+      if (rHand)     { rHand.rotation.z =  0.15; rHand.rotation.y =  0.25 }
+    }
 
     // 设置 lookAt 目标
     if (vrm.lookAt) vrm.lookAt.target = lookAtTarget
@@ -658,16 +803,15 @@ async function loadVRM(url) {
   } catch (e) {
     vrmError.value   = e.message || '加载失败'
     vrmLoading.value = false
-    // 本地模型缺失时自动 fallback 到 CDN 示例模型
-    if (url === LOCAL_VRM_URL) {
-      loadVRM(FALLBACK_VRM_URL)
+    // 本地 VRoid 模型缺失时自动 fallback 到官方示例模型
+    if (url === VRM_PRESET_URLS.vroid_base) {
+      loadVRM(VRM_PRESET_URLS.official)
     }
   }
 }
 
 function retryLoadVRM() {
-  const settings = loadSettings()
-  loadVRM(settings.vrmUrl || DEFAULT_VRM_URL)
+  loadVRM(getDefaultVrmUrl())
 }
 
 function downloadVRM() {
@@ -742,19 +886,26 @@ function resetPose() {
   resetBone(VRMHumanBoneName.RightUpperArm)
   resetBone(VRMHumanBoneName.LeftLowerArm)
   resetBone(VRMHumanBoneName.RightLowerArm)
+  resetBone(VRMHumanBoneName.LeftHand)
+  resetBone(VRMHumanBoneName.RightHand)
   resetBone(VRMHumanBoneName.Spine)
   resetBone(VRMHumanBoneName.Hips)
   resetBone(VRMHumanBoneName.Neck)
 
-  // 重新应用 T-pose 修正
+  // 只有 VRoid 素体需要重新应用 T-pose 修正
+  if (getVrmPreset() !== 'vroid_base') return
   const lShoulder = h.getNormalizedBoneNode(VRMHumanBoneName.LeftUpperArm)
   const rShoulder = h.getNormalizedBoneNode(VRMHumanBoneName.RightUpperArm)
   const lForearm  = h.getNormalizedBoneNode(VRMHumanBoneName.LeftLowerArm)
   const rForearm  = h.getNormalizedBoneNode(VRMHumanBoneName.RightLowerArm)
-  if (lShoulder) lShoulder.rotation.z = -1.1
-  if (rShoulder) rShoulder.rotation.z =  1.1
-  if (lForearm)  lForearm.rotation.z  = -0.1
-  if (rForearm)  rForearm.rotation.z  =  0.1
+  const lHand     = h.getNormalizedBoneNode(VRMHumanBoneName.LeftHand)
+  const rHand     = h.getNormalizedBoneNode(VRMHumanBoneName.RightHand)
+  if (lShoulder) lShoulder.rotation.z = -1.15
+  if (rShoulder) rShoulder.rotation.z =  1.15
+  if (lForearm)  lForearm.rotation.z  = -0.15
+  if (rForearm)  rForearm.rotation.z  =  0.15
+  if (lHand)     { lHand.rotation.z = -0.15; lHand.rotation.y = -0.25 }
+  if (rHand)     { rHand.rotation.z =  0.15; rHand.rotation.y =  0.25 }
 }
 
 function updateGesture(t, delta) {
@@ -895,7 +1046,7 @@ onUnmounted(() => {
 .character-panel {
   flex: 0 0 36%;
   position: relative;
-  background: #0d0d1a;
+  background: var(--panel-bg, #ffffff);
   overflow: hidden;
 }
 .three-canvas { width: 100%; height: 100%; display: block; }
@@ -906,16 +1057,16 @@ onUnmounted(() => {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   gap: 12px;
-  background: rgba(13, 13, 26, 0.85);
+  background: var(--overlay-bg, rgba(255, 255, 255, 0.88));
   backdrop-filter: blur(6px);
   z-index: 10;
   padding: 20px;
 }
-.vrm-overlay--error { background: rgba(13, 13, 26, 0.92); }
+.vrm-overlay--error { background: var(--overlay-bg-error, rgba(255, 255, 255, 0.95)); }
 
 .vrm-spinner {
   width: 36px; height: 36px;
-  border: 3px solid rgba(160, 100, 255, 0.2);
+  border: 3px solid rgba(160, 100, 255, 0.25);
   border-top-color: #a064ff;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -923,35 +1074,35 @@ onUnmounted(() => {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .vrm-load-text {
-  font-size: 13px; color: rgba(255,255,255,0.7); font-weight: 500;
+  font-size: 13px; color: var(--overlay-text, rgba(60,60,80,0.8)); font-weight: 500;
 }
 .vrm-progress-bar {
   width: 160px; height: 3px;
-  background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;
+  background: var(--progress-bg, rgba(0,0,0,0.08)); border-radius: 2px; overflow: hidden;
 }
 .vrm-progress-fill {
   height: 100%; background: #a064ff;
   border-radius: 2px; transition: width 0.3s ease;
 }
 .vrm-err-msg {
-  font-size: 12px; color: #ff9090; text-align: center;
+  font-size: 12px; color: var(--err-color, #c04040); text-align: center;
   max-width: 220px; line-height: 1.5;
 }
 .vrm-retry-btn {
-  padding: 5px 16px; border: 1px solid rgba(160,100,255,0.5);
-  border-radius: 20px; background: rgba(160,100,255,0.12);
-  color: #c090ff; font-size: 12px; cursor: pointer; font-family: inherit;
+  padding: 5px 16px; border: 1px solid var(--btn-border, rgba(160,100,255,0.5));
+  border-radius: 20px; background: var(--btn-bg, rgba(160,100,255,0.12));
+  color: var(--btn-color, #7030a0); font-size: 12px; cursor: pointer; font-family: inherit;
   transition: all .15s;
 }
-.vrm-retry-btn:hover { background: rgba(160,100,255,0.25); }
-.vrm-err-hint { font-size: 11px; color: rgba(255,255,255,0.3); }
+.vrm-retry-btn:hover { background: var(--btn-hover-bg, rgba(160,100,255,0.22)); }
+.vrm-err-hint { font-size: 11px; color: var(--hint-color, rgba(80,80,100,0.5)); }
 
 /* 动作按钮 */
 .anim-controls {
   position: absolute; bottom: 56px; left: 50%; transform: translateX(-50%);
   display: flex; gap: 8px;
-  background: rgba(13,13,30,.6); backdrop-filter: blur(10px);
-  border: .5px solid rgba(255,255,255,.1); border-radius: 20px;
+  background: var(--anim-bg, rgba(255,255,255,.7)); backdrop-filter: blur(10px);
+  border: .5px solid var(--anim-border, rgba(0,0,0,.08)); border-radius: 20px;
   padding: 5px 8px; z-index: 5;
 }
 .anim-btn {
@@ -961,15 +1112,15 @@ onUnmounted(() => {
   display: flex; align-items: center; justify-content: center;
   transition: all .15s; filter: grayscale(0.3);
 }
-.anim-btn:hover { background: rgba(255,255,255,.1); filter: grayscale(0); }
-.anim-btn.active { background: rgba(160,100,255,.35); filter: grayscale(0); box-shadow: 0 0 8px rgba(160,100,255,.4); }
+.anim-btn:hover { background: var(--anim-hover, rgba(0,0,0,.05)); filter: grayscale(0); }
+.anim-btn.active { background: var(--anim-active, rgba(160,100,255,.25)); filter: grayscale(0); box-shadow: 0 0 8px var(--anim-active, rgba(160,100,255,.35)); }
 
 /* 角色状态徽章 */
 .character-badge {
   position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
   display: flex; align-items: center; gap: 7px;
-  background: rgba(13,13,30,.75); backdrop-filter: blur(12px);
-  border: .5px solid rgba(255,255,255,.12); border-radius: 20px;
+  background: var(--badge-bg, rgba(255,255,255,.85)); backdrop-filter: blur(12px);
+  border: .5px solid var(--badge-border, rgba(0,0,0,.1)); border-radius: 20px;
   padding: 6px 14px; white-space: nowrap; z-index: 5;
 }
 .badge-dot {
@@ -978,14 +1129,14 @@ onUnmounted(() => {
 }
 .badge-dot.thinking { background: #ffcc00; box-shadow: 0 0 7px #ffcc0088; animation: pulse .8s ease-in-out infinite; }
 .badge-dot.talking  { background: #5ac8fa; box-shadow: 0 0 7px #5ac8fa88; animation: pulse .5s ease-in-out infinite; }
-.badge-name { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.9); }
-.badge-status { font-size: 11px; color: rgba(255,255,255,.5); }
+.badge-name { font-size: 13px; font-weight: 600; color: var(--badge-name, rgba(40,40,60,.9)); }
+.badge-status { font-size: 11px; color: var(--badge-status, rgba(80,80,100,.6)); }
 @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
 
 .no-settings-tip {
   position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
-  background: rgba(255,80,80,.18); border: .5px solid rgba(255,80,80,.4);
-  border-radius: 10px; padding: 6px 14px; font-size: 12px; color: #ff9090;
+  background: var(--tip-bg, rgba(255,80,80,.18)); border: .5px solid var(--tip-border, rgba(255,80,80,.4));
+  border-radius: 10px; padding: 6px 14px; font-size: 12px; color: var(--tip-color, #ff9090);
   white-space: nowrap; backdrop-filter: blur(8px); z-index: 5;
 }
 
