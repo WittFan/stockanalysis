@@ -405,11 +405,11 @@ let ttsUnlocked = false
 function unlockTTS() {
   if (ttsUnlocked || !window.speechSynthesis) return
   ttsUnlocked = true
-  // 某些浏览器需要一次空发言来解锁音频
-  const empty = new SpeechSynthesisUtterance('')
-  empty.volume = 0
-  window.speechSynthesis.speak(empty)
-  window.speechSynthesis.cancel()
+  // 用极短空格在用户手势上下文中激活语音引擎，不用 cancel()
+  const u = new SpeechSynthesisUtterance(' ')
+  u.volume = 0.001
+  u.rate = 10
+  window.speechSynthesis.speak(u)
 }
 
 function speak(text) {
@@ -417,8 +417,8 @@ function speak(text) {
   const settings = loadSettings()
   if (!settings.ttsEnabled) return
 
+  console.log('[TTS] speak:', text.slice(0, 30) + (text.length > 30 ? '...' : ''))
   stopSpeaking()
-  unlockTTS()
 
   const utterance = new SpeechSynthesisUtterance(text)
   utterance.lang = 'zh-CN'
@@ -437,10 +437,10 @@ function speak(text) {
   utterance.onend = () => { charState.value = 'idle' }
   utterance.onerror = (e) => {
     charState.value = 'idle'
-    console.warn('[TTS]', e.error)
-    // 自动播放被阻止时提示用户
+    console.warn('[TTS error]', e.error, e)
     if (e.error === 'not-allowed') {
       pushAssistant('🔇 语音播放被浏览器阻止，请点击页面任意位置后再试~')
+      ttsUnlocked = false
     }
   }
 
@@ -501,8 +501,8 @@ async function sendMessage() {
     return
   }
 
-  unlockTTS()
   stopSpeaking()
+  unlockTTS()
   displayMessages.value.push({ id: ++msgId, role: 'user', content: text, time: getTime() })
   apiMessages.push({ role: 'user', content: text })
   inputText.value = ''

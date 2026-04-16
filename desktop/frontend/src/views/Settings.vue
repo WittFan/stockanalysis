@@ -256,7 +256,7 @@ const form = reactive({
   systemPrompt: DEFAULT_SYSTEM_PROMPT,
   vrmPreset: 'official',   // official | vroid_base | custom
   scenePreset: 'auto',     // auto | dark | light
-  ttsEnabled: false,
+  ttsEnabled: true,
   ttsVoiceUri: '',
   vrmUrl: '',
 })
@@ -454,12 +454,25 @@ function loadVoices() {
   availableVoices.value = zhVoices.length ? zhVoices : voices
 }
 
+let settingsTtsUnlocked = false
+
+function unlockSettingsTTS() {
+  if (settingsTtsUnlocked || !window.speechSynthesis) return
+  settingsTtsUnlocked = true
+  const u = new SpeechSynthesisUtterance(' ')
+  u.volume = 0.001
+  u.rate = 10
+  window.speechSynthesis.speak(u)
+}
+
 function testTTS() {
   if (!window.speechSynthesis) return
+  unlockSettingsTTS()
   window.speechSynthesis.cancel()
   const u = new SpeechSynthesisUtterance('你好，我是助理小姐')
   u.lang = 'zh-CN'
   u.rate = 1.05
+  u.volume = 1.0
   if (form.ttsVoiceUri) {
     const voice = availableVoices.value.find(v => v.voiceURI === form.ttsVoiceUri)
     if (voice) u.voice = voice
