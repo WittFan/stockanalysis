@@ -395,6 +395,37 @@ function loadSettings() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') } catch { return {} }
 }
 
+// ── TTS ───────────────────────────────────────────────────
+function stopSpeaking() {
+  if (window.speechSynthesis) window.speechSynthesis.cancel()
+}
+
+function speak(text) {
+  if (!text || !window.speechSynthesis) return
+  const settings = loadSettings()
+  if (!settings.ttsEnabled) return
+
+  stopSpeaking()
+
+  const utterance = new SpeechSynthesisUtterance(text)
+  utterance.lang = 'zh-CN'
+  utterance.rate = 1.05
+  utterance.pitch = 1.0
+
+  // 如果用户选择了特定语音，尝试匹配
+  if (settings.ttsVoiceUri) {
+    const voices = window.speechSynthesis.getVoices()
+    const voice = voices.find(v => v.voiceURI === settings.ttsVoiceUri)
+    if (voice) utterance.voice = voice
+  }
+
+  utterance.onstart = () => { charState.value = 'talking' }
+  utterance.onend = () => { charState.value = 'idle' }
+  utterance.onerror = () => { charState.value = 'idle' }
+
+  window.speechSynthesis.speak(utterance)
+}
+
 // ── 工具函数 ──────────────────────────────────────────────
 function getTime() {
   const n = new Date()
@@ -449,6 +480,7 @@ async function sendMessage() {
     return
   }
 
+  stopSpeaking()
   displayMessages.value.push({ id: ++msgId, role: 'user', content: text, time: getTime() })
   apiMessages.push({ role: 'user', content: text })
   inputText.value = ''
@@ -485,6 +517,7 @@ async function agentLoop(maxRounds) {
       charState.value = 'thinking'
     } else {
       setTimeout(() => { charState.value = 'idle' }, Math.min((result.content?.length || 0) * 50, 6000))
+      speak(result.content)
       break
     }
   }
@@ -612,6 +645,7 @@ async function executeTool(name, argsRaw) {
 function pushAssistant(text) {
   displayMessages.value.push({ id: ++msgId, role: 'assistant', content: text, toolCalls: [], streaming: false, time: getTime() })
   scrollToBottom()
+  speak(text)
 }
 
 // ── Three.js + VRM ────────────────────────────────────────

@@ -183,6 +183,42 @@
         </div>
       </div>
 
+      <!-- TTS 语音设置 -->
+      <div class="card settings-card">
+        <div class="card-section-title">语音朗读</div>
+
+        <div class="field-row">
+          <div class="field-label">启用 TTS</div>
+          <div class="field-control">
+            <label class="switch-label">
+              <input type="checkbox" v-model="form.ttsEnabled" class="switch-input" />
+              <span class="switch-slider" />
+            </label>
+            <div class="field-hint">助理回复完成后自动朗读内容</div>
+          </div>
+        </div>
+
+        <div class="field-row" v-if="form.ttsEnabled && availableVoices.length">
+          <div class="field-label">语音</div>
+          <div class="field-control">
+            <select v-model="form.ttsVoiceUri" class="select-input">
+              <option value="">系统默认</option>
+              <option v-for="v in availableVoices" :key="v.voiceURI" :value="v.voiceURI">
+                {{ v.name }}
+              </option>
+            </select>
+            <div class="field-hint">建议选择名字里带「Chinese」「中文」或「Ting-Ting」的语音</div>
+          </div>
+        </div>
+
+        <div class="field-row" v-if="form.ttsEnabled">
+          <div class="field-label"></div>
+          <div class="field-control">
+            <button class="btn" @click="testTTS">试听</button>
+          </div>
+        </div>
+      </div>
+
       <div class="card settings-card">
         <div class="card-section-title">助理性格</div>
         <div class="preset-grid">
@@ -220,6 +256,8 @@ const form = reactive({
   systemPrompt: DEFAULT_SYSTEM_PROMPT,
   vrmPreset: 'official',   // official | vroid_base | custom
   scenePreset: 'auto',     // auto | dark | light
+  ttsEnabled: false,
+  ttsVoiceUri: '',
   vrmUrl: '',
 })
 
@@ -406,6 +444,29 @@ function saveVrmSettings() {
   setTimeout(() => { vrmSaveStatus.value = '' }, 3000)
 }
 
+const availableVoices = ref([])
+
+function loadVoices() {
+  if (!window.speechSynthesis) return
+  const voices = window.speechSynthesis.getVoices()
+  // 优先中文语音，再按本地/非本地排序
+  const zhVoices = voices.filter(v => v.lang && (v.lang.startsWith('zh') || v.lang.startsWith('cmn')))
+  availableVoices.value = zhVoices.length ? zhVoices : voices
+}
+
+function testTTS() {
+  if (!window.speechSynthesis) return
+  window.speechSynthesis.cancel()
+  const u = new SpeechSynthesisUtterance('你好，我是助理小姐')
+  u.lang = 'zh-CN'
+  u.rate = 1.05
+  if (form.ttsVoiceUri) {
+    const voice = availableVoices.value.find(v => v.voiceURI === form.ttsVoiceUri)
+    if (voice) u.voice = voice
+  }
+  window.speechSynthesis.speak(u)
+}
+
 function saveSettings() {
   const data = { ...form }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
@@ -420,6 +481,10 @@ onMounted(() => {
       const data = JSON.parse(saved)
       Object.assign(form, data)
     } catch {}
+  }
+  loadVoices()
+  if (window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) {
+    window.speechSynthesis.onvoiceschanged = loadVoices
   }
 })
 </script>
@@ -669,5 +734,43 @@ onMounted(() => {
 .vrm-file-name {
   margin-left: 10px; font-size: var(--size-xs);
   color: var(--label-muted); font-family: 'SF Mono', Menlo, monospace;
+}
+
+/* Switch */
+.switch-label {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+}
+.switch-input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.switch-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--separator-opaque);
+  border-radius: 24px;
+  transition: .2s;
+}
+.switch-slider::before {
+  content: "";
+  position: absolute;
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: .2s;
+}
+.switch-input:checked + .switch-slider {
+  background: var(--accent);
+}
+.switch-input:checked + .switch-slider::before {
+  transform: translateX(20px);
 }
 </style>
