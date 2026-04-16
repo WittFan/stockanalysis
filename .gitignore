@@ -54,3 +54,7 @@ desktop/electron/resources/
 
 # electron-builder 缓存
 .electron-builder-cache/
+
+# VRM models (download separately to avoid large binaries in git)
+*.vrm
+desktop/frontend/public/models/
