@@ -237,12 +237,12 @@ const SCENE_CONFIGS = {
   },
   light: {
     bg: 0xffffff,
-    exposure: 1.8,
-    ambient: { color: 0xffffff, intensity: 1.4 },
-    key: { color: 0xfff5e8, intensity: 3.2, pos: [1.2, 3, 1.8] },
-    fill: { color: 0xe8f4ff, intensity: 1.6, pos: [-1.5, 2, 1.5], type: 'directional' },
-    rim: { color: 0xffd1b3, intensity: 1.0, pos: [0, 2, -2], type: 'directional' },
-    front: { color: 0xffffff, intensity: 0.9, pos: [0, 1.2, 2.2], type: 'point', distance: 5 },
+    exposure: 1.35,
+    ambient: { color: 0xffffff, intensity: 0.9 },
+    key: { color: 0xfff0e0, intensity: 2.2, pos: [1.2, 3, 1.8] },
+    fill: { color: 0xe0ecff, intensity: 1.0, pos: [-1.5, 2, 1.5], type: 'directional' },
+    rim: { color: 0xffc8a8, intensity: 0.7, pos: [0, 2, -2], type: 'directional' },
+    front: { color: 0xffffff, intensity: 0.5, pos: [0, 1.2, 2.2], type: 'point', distance: 5 },
     diskColor: 0xd0d0e0,
     diskOpacity: 0.15,
     particleColor: 0xa090c0,
@@ -400,17 +400,31 @@ function stopSpeaking() {
   if (window.speechSynthesis) window.speechSynthesis.cancel()
 }
 
+let ttsUnlocked = false
+
+function unlockTTS() {
+  if (ttsUnlocked || !window.speechSynthesis) return
+  ttsUnlocked = true
+  // 某些浏览器需要一次空发言来解锁音频
+  const empty = new SpeechSynthesisUtterance('')
+  empty.volume = 0
+  window.speechSynthesis.speak(empty)
+  window.speechSynthesis.cancel()
+}
+
 function speak(text) {
   if (!text || !window.speechSynthesis) return
   const settings = loadSettings()
   if (!settings.ttsEnabled) return
 
   stopSpeaking()
+  unlockTTS()
 
   const utterance = new SpeechSynthesisUtterance(text)
   utterance.lang = 'zh-CN'
   utterance.rate = 1.05
   utterance.pitch = 1.0
+  utterance.volume = 1.0
 
   // 如果用户选择了特定语音，尝试匹配
   if (settings.ttsVoiceUri) {
@@ -421,7 +435,14 @@ function speak(text) {
 
   utterance.onstart = () => { charState.value = 'talking' }
   utterance.onend = () => { charState.value = 'idle' }
-  utterance.onerror = () => { charState.value = 'idle' }
+  utterance.onerror = (e) => {
+    charState.value = 'idle'
+    console.warn('[TTS]', e.error)
+    // 自动播放被阻止时提示用户
+    if (e.error === 'not-allowed') {
+      pushAssistant('🔇 语音播放被浏览器阻止，请点击页面任意位置后再试~')
+    }
+  }
 
   window.speechSynthesis.speak(utterance)
 }
@@ -480,6 +501,7 @@ async function sendMessage() {
     return
   }
 
+  unlockTTS()
   stopSpeaking()
   displayMessages.value.push({ id: ++msgId, role: 'user', content: text, time: getTime() })
   apiMessages.push({ role: 'user', content: text })
@@ -1058,13 +1080,22 @@ function animate() {
 }
 
 // ── 生命周期 ──────────────────────────────────────────────
-onMounted(() => { nextTick(() => { initThree() }) })
+function onFirstInteraction() {
+  unlockTTS()
+  document.removeEventListener('click', onFirstInteraction)
+}
+
+onMounted(() => {
+  nextTick(() => { initThree() })
+  document.addEventListener('click', onFirstInteraction)
+})
 onUnmounted(() => {
   cancelAnimationFrame(animFrameId)
   if (currentVRM) { VRMUtils.deepDispose(currentVRM.scene); currentVRM = null }
   renderer?.dispose()
   if (window._vrmResizeObs) { window._vrmResizeObs.disconnect(); delete window._vrmResizeObs }
   containerRef.value?.removeEventListener('mousemove', onMouseMove)
+  document.removeEventListener('click', onFirstInteraction)
 })
 </script>
 
