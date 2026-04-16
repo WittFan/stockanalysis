@@ -776,8 +776,8 @@ async function loadVRM(url) {
       vrm.scene.rotation.y = 0
     }
 
-    // 修正 T-pose：根据模型预设决定是否将手臂和手部下垂到自然姿态
-    if (vrmPreset === 'vroid_base') {
+    // 修正 T-pose：官方示例和 VRoid 素体都将手臂和手部下垂到自然姿态
+    if (vrmPreset === 'official' || vrmPreset === 'vroid_base') {
       const lShoulder = vrm.humanoid?.getNormalizedBoneNode(VRMHumanBoneName.LeftUpperArm)
       const rShoulder = vrm.humanoid?.getNormalizedBoneNode(VRMHumanBoneName.RightUpperArm)
       const lForearm  = vrm.humanoid?.getNormalizedBoneNode(VRMHumanBoneName.LeftLowerArm)
@@ -892,8 +892,9 @@ function resetPose() {
   resetBone(VRMHumanBoneName.Hips)
   resetBone(VRMHumanBoneName.Neck)
 
-  // 只有 VRoid 素体需要重新应用 T-pose 修正
-  if (getVrmPreset() !== 'vroid_base') return
+  // 官方示例和 VRoid 素体都需要重新应用 T-pose 修正
+  const preset = getVrmPreset()
+  if (preset !== 'official' && preset !== 'vroid_base') return
   const lShoulder = h.getNormalizedBoneNode(VRMHumanBoneName.LeftUpperArm)
   const rShoulder = h.getNormalizedBoneNode(VRMHumanBoneName.RightUpperArm)
   const lForearm  = h.getNormalizedBoneNode(VRMHumanBoneName.LeftLowerArm)
