@@ -194,7 +194,12 @@
               <input type="checkbox" v-model="form.ttsEnabled" class="switch-input" />
               <span class="switch-slider" />
             </label>
-            <div class="field-hint">助理回复完成后自动朗读内容</div>
+            <div class="field-hint">
+              助理回复完成后自动朗读内容
+              <span v-if="form.ttsEnabled" :class="ttsStatus.ok ? 'hint-ok' : 'hint-err'" style="margin-left:8px">
+                {{ ttsStatus.text }}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -445,6 +450,11 @@ function saveVrmSettings() {
 }
 
 const availableVoices = ref([])
+const ttsStatus = computed(() => {
+  if (!window.speechSynthesis) return { ok: false, text: '当前浏览器不支持语音合成' }
+  if (!availableVoices.value.length) return { ok: false, text: '语音列表加载中…（如果一直无语音，可能是系统未安装中文语音包）' }
+  return { ok: true, text: `已加载 ${availableVoices.value.length} 条语音` }
+})
 
 function loadVoices() {
   if (!window.speechSynthesis) return

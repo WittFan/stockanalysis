@@ -16,6 +16,19 @@ const { spawn, execSync } = require('child_process')
 const path  = require('path')
 const http  = require('http')
 
+// 尽早设置应用名称，确保 macOS 菜单栏左上角显示正确名称
+app.setName('大道量化')
+
+// 启用 Chromium 的 Web Speech API（TTS）
+app.commandLine.appendSwitch('enable-speech-dispatcher')
+app.commandLine.appendSwitch('enable-features', 'WebSpeechAPI')
+app.commandLine.appendSwitch('enable-speech-api')
+
+// macOS 额外：确保辅助功能/TTS 权限可以被请求
+if (process.platform === 'darwin') {
+  app.commandLine.appendSwitch('disable-features', 'MuteTTS')
+}
+
 // ── 配置 ──────────────────────────────────────────────────────────────────────
 const BACKEND_PORT   = 8888
 const VITE_PORT      = 5173
@@ -214,7 +227,7 @@ function createWindow() {
       console.log(`[electron] 加载前端：${url}`)
       mainWindow.loadURL(url)
     })
-    mainWindow.webContents.openDevTools()
+    // DevTools 默认不打开，需要时手动通过菜单「视图→开发者工具」或 Cmd+Option+I 打开
   } else {
     mainWindow.loadFile(path.join(__dirname, '../frontend/dist/index.html'))
   }
@@ -371,6 +384,10 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
+  // macOS：退出前隐藏 Dock 图标，防止短暂闪回 Electron 默认图标
+  if (process.platform === 'darwin' && app.dock) {
+    app.dock.hide()
+  }
   // 退出前杀掉 Flask 子进程
   if (backendProcess) {
     console.log('[backend] 正在关闭…')
