@@ -244,7 +244,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 
 const STORAGE_KEY = 'assistant_settings'
 
