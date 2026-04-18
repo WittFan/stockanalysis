@@ -415,8 +415,11 @@ function getAudioContext() {
 
 function connectAudioAnalyser(audio) {
   const ctx = getAudioContext()
+  // 首次在用户手势上下文中恢复 AudioContext，否则 AnalyserNode 无输出
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => {})
+  }
   if (audioAnalyser) {
-    // 如果已有 analyser，先断开旧的连接（简化处理：直接重建）
     try { audioAnalyser.disconnect() } catch {}
   }
   audioAnalyser = ctx.createAnalyser()
@@ -446,6 +449,7 @@ function stopSpeaking() {
     currentAudio.currentTime = 0
     currentAudio = null
   }
+  charState.value = 'idle'
   // fallback: 同时取消浏览器原生 TTS
   if (window.speechSynthesis) window.speechSynthesis.cancel()
 }
@@ -632,7 +636,6 @@ async function agentLoop(maxRounds) {
       }
       charState.value = 'thinking'
     } else {
-      setTimeout(() => { charState.value = 'idle' }, Math.min((result.content?.length || 0) * 50, 6000))
       speak(result.content)
       break
     }
