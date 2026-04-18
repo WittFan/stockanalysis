@@ -49,8 +49,7 @@ def speech():
       "text": "你好，我是助理小姐",
       "voice": "zh-CN-XiaoxiaoNeural",
       "rate": "+0%",
-      "pitch": "+0Hz",
-      "style": "assistant"
+      "pitch": "+0Hz"
     }
     """
     if not _EDGE_TTS_AVAILABLE:
@@ -60,6 +59,16 @@ def speech():
     text = data.get('text', '').strip()
     if not text:
         return jsonify({'error': 'text 不能为空'}), 400
+
+    # 防御性过滤：移除可能被 TTS 误读的 emoji 和多余空白
+    import re
+    text = re.sub(
+        r'[😀-🙏🌀-🗿🚀-🛿'
+        r'🇠-🇿☀-⛿✀-➿'
+        r'⬀-⯿︀-️🤀-🧿]',
+        '', text,
+    )
+    text = ' '.join(text.split())
 
     voice = data.get('voice', 'zh-CN-XiaoxiaoNeural')
     rate = data.get('rate', '+0%')

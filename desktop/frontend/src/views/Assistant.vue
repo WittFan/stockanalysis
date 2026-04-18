@@ -554,14 +554,39 @@ function md(text) {
 function stripMarkdown(text) {
   if (!text) return ''
   return text
+    // 代码块
     .replace(/```[\s\S]*?```/g, '（代码省略）')
+    // 行内代码
     .replace(/`([^`\n]+)`/g, '$1')
+    // 粗体
     .replace(/\*\*([^*]+)\*\*/g, '$1')
+    // 斜体
     .replace(/\*([^*]+)\*/g, '$1')
+    // 删除线
+    .replace(/~~([^~]+)~~/g, '$1')
+    // 标题
     .replace(/^#{1,6}\s+/gm, '')
+    // 无序列表
     .replace(/^\s*[-*]\s+/gm, '')
+    // 有序列表
+    .replace(/^\s*\d+\.\s+/gm, '')
+    // 图片
     .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    // 链接
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    // 引用
+    .replace(/^>\s+/gm, '')
+    // 水平线
+    .replace(/^---+$/gm, '')
+    // LaTeX 行内公式
+    .replace(/\$([^$\n]+)\$/g, '$1')
+    // LaTeX 块级公式
+    .replace(/\$\$[\s\S]*?\$\$/g, '（公式省略）')
+    // 裸 URL
+    .replace(/https?:\/\/\S+/g, '（链接）')
+    // Emoji 和扩展象形符号（⭐✨ 等会被 TTS 读出来）
+    .replace(/\p{Extended_Pictographic}/gu, '')
+    // 多余空白
     .replace(/\n+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
