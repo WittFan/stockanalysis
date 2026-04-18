@@ -9,13 +9,13 @@
     - 右侧字体大小切换（A⁻ / A / A⁺），自动检测屏幕，手动可覆盖
   -->
   <nav class="sa-nav">
-    <span class="logo">大道量化投研平台</span>
-    <span class="nav-sep"></span>
-    <RouterLink to="/chart"    class="nav-btn" :class="{ active: route.path === '/chart' }">趋势图</RouterLink>
-    <RouterLink to="/industry" class="nav-btn" :class="{ active: route.path === '/industry' }">行业分组</RouterLink>
-    <RouterLink to="/backtest" class="nav-btn" :class="{ active: route.path === '/backtest' }">回测</RouterLink>
-    <RouterLink to="/value"    class="nav-btn" :class="{ active: route.path === '/value' }">价值坐标系</RouterLink>
-    <RouterLink to="/download" class="nav-btn" :class="{ active: route.path === '/download' }">数据管理</RouterLink>
+    <RouterLink to="/assistant" class="nav-btn" :class="{ active: route.path === '/assistant' }">助理</RouterLink>
+    <RouterLink to="/value"     class="nav-btn" :class="{ active: route.path === '/value' }">价值坐标系</RouterLink>
+    <RouterLink to="/chart"     class="nav-btn" :class="{ active: route.path === '/chart' }">趋势图</RouterLink>
+    <RouterLink to="/industry"  class="nav-btn" :class="{ active: route.path === '/industry' }">行业分组</RouterLink>
+    <RouterLink to="/backtest"  class="nav-btn" :class="{ active: route.path === '/backtest' }">回测</RouterLink>
+    <RouterLink to="/download"  class="nav-btn" :class="{ active: route.path === '/download' }">数据管理</RouterLink>
+    <RouterLink to="/settings"  class="nav-btn nav-btn--settings" :class="{ active: route.path === '/settings' }">设置</RouterLink>
   </nav>
   <div class="sa-page">
     <RouterView />

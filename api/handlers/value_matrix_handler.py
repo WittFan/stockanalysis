@@ -1,37 +1,49 @@
 """
 价值坐标系 Handler
 
-直接调用 Tushare fina_indicator 接口，不依赖本地数据库。
+数据来源：本地 PostgreSQL fina_indicator 表（年报/季报数据）。
+每只股票取该 end_date 下 ann_date 最新的一条记录（DISTINCT ON）。
 
 路由（Flask API）：
   GET  /api/value/data?year=2023&metric=gross  → JSON {stocks, count}
   GET  /api/value/data?year=5y&metric=gross    → JSON {stocks, count, year_range}
   POST /api/value/forecast                     → JSON {stocks}
 
-近5年（year=5y）计算规则：
-  - 年份范围：动态，取当前年份往前5个已完成年报年度
+近5年（year=5y）最新一年的数据获取规则（季度感知）：
+  - 一季度（1-3月）：用去年三季报（end_date=YYYY0930）代替去年全年
+  - 二季度（4-6月）：优先用去年年报（end_date=YYYY1231），无年报数据则用三季报
+  - 三、四季度（7-12月）：使用去年年报（end_date=YYYY1231）
+
+近5年聚合计算规则：
   - 销售毛利率/净利率（x）：近5年 算术平均值
   - 营业收入同比增长率（y）：近5年 累积平均值（几何平均，即 CAGR）
     CAGR = ((1+g1)*(1+g2)*...*(1+gn))^(1/n) - 1
 """
 import datetime
 import json
-from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeout
 
 import pandas as pd
 from loguru import logger
+from sqlalchemy import text
 
 from api.cache import value_cache
 from api.stockpool import load_stockpool
+from orm_models.api import engine
 
 
 # ── 常量 ──────────────────────────────────────────────────────────────────────
 
 AVAILABLE_YEARS  = list(range(datetime.date.today().year - 1, datetime.date.today().year - 6, -1))
-DEFAULT_YEAR     = 2024
+DEFAULT_YEAR     = AVAILABLE_YEARS[0]
 MULTI_YEAR_KEY   = '5y'              # 近5年模式的参数值
 MULTI_YEAR_COUNT = 5                 # 近N年
-TUSHARE_FIELDS   = 'ts_code,ann_date,end_date,grossprofit_margin,netprofit_margin,or_yoy'
+DB_FIELDS        = 'ts_code, ann_date, end_date, grossprofit_margin, netprofit_margin, or_yoy'
+
+
+def get_current_quarter() -> int:
+    """返回当前季度（1/2/3/4）。"""
+    month = datetime.date.today().month
+    return (month - 1) // 3 + 1
 
 
 def get_recent_years(n: int = MULTI_YEAR_COUNT) -> list:
@@ -42,54 +54,93 @@ def get_recent_years(n: int = MULTI_YEAR_COUNT) -> list:
     return list(range(latest - n + 1, latest + 1))
 
 
-# ── 数据获取 ──────────────────────────────────────────────────────────────────
+# ── 数据获取（从 PostgreSQL 查询）────────────────────────────────────────────
 
-def fetch_fina_data(symbols: list, year: int) -> pd.DataFrame:
+def fetch_fina_data(symbols: list, year: int, end_date: str = None) -> pd.DataFrame:
     """
-    从 Tushare 并发获取年报财务指标，结果按年缓存。
-    最多 5 个并发线程，每个调用最长等待 15s，避免单只挂死。
+    从本地 PostgreSQL fina_indicator 表查询财务指标，结果按 end_date 缓存。
+
+    策略：每只股票取该 end_date 下 ann_date 最新的一条（DISTINCT ON）。
+    end_date 不传时默认使用 '{year}1231'（年报）。
+    支持传入季报 end_date，如 '20250930'（三季报）。
     """
-    raw_cache_key = f'raw_{year}'
+    end_date_str  = end_date if end_date else f'{year}1231'
+    raw_cache_key = f'raw_{end_date_str}'
     if value_cache.has(raw_cache_key):
         return value_cache.get(raw_cache_key)
 
-    from config import pro
-
-    period = f'{year}1231'
-    logger.info(f"开始拉取 {year} 年报财务指标，共 {len(symbols)} 只股票（并发5线程）")
-
-    def _fetch_one(ts_code: str):
-        try:
-            df = pro.fina_indicator(ts_code=ts_code, period=period, fields=TUSHARE_FIELDS)
-            if df is not None and not df.empty:
-                return df.sort_values('ann_date', ascending=False).iloc[0].to_dict()
-        except Exception as e:
-            logger.warning(f"获取 {ts_code} {year}年财务数据失败: {e}")
-        return None
-
-    rows = []
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        futures = {executor.submit(_fetch_one, code): code for code in symbols}
-        for future in as_completed(futures, timeout=300):
-            try:
-                row = future.result(timeout=15)
-                if row is not None:
-                    rows.append(row)
-            except FuturesTimeout:
-                logger.warning(f"获取 {futures[future]} 超时，跳过")
-            except Exception as e:
-                logger.warning(f"获取 {futures[future]} 异常: {e}")
-
-    if rows:
-        result = pd.DataFrame(rows)[['ts_code', 'ann_date', 'end_date',
-                                      'grossprofit_margin', 'netprofit_margin', 'or_yoy']]
+    # 若有股票池过滤，用 IN 子句；否则查全部
+    if symbols:
+        placeholders = ', '.join(f"'{s}'" for s in symbols)
+        where_extra  = f"AND ts_code IN ({placeholders})"
     else:
+        where_extra = ''
+
+    sql = text(f"""
+        SELECT DISTINCT ON (ts_code)
+            ts_code, ann_date, end_date,
+            grossprofit_margin, netprofit_margin, or_yoy
+        FROM fina_indicator
+        WHERE end_date = :end_date
+        {where_extra}
+        ORDER BY ts_code, ann_date DESC
+    """)
+
+    try:
+        with engine.connect() as con:
+            result = pd.read_sql(sql, con, params={'end_date': end_date_str})
+    except Exception as e:
+        logger.error(f"查询 fina_indicator end_date={end_date_str} 失败: {e}")
         result = pd.DataFrame(columns=['ts_code', 'ann_date', 'end_date',
                                         'grossprofit_margin', 'netprofit_margin', 'or_yoy'])
 
-    logger.info(f"{year} 年报数据拉取完成：{len(result)} 条有效记录")
-    value_cache.set(raw_cache_key, result, ttl=3600)  # 财务数据缓存1小时
+    logger.info(f"fina_indicator end_date={end_date_str} 查询完成：{len(result)} 条有效记录")
+    value_cache.set(raw_cache_key, result, ttl=3600)   # 缓存1小时
     return result
+
+
+def fetch_latest_year_data(symbols: list, latest_year: int) -> pd.DataFrame:
+    """
+    按当前季度决定最新年份的数据来源，返回合并后的 DataFrame（每股最多1条）。
+
+    规则：
+      一季度（1-3月）：用去年三季报（YYYY0930）代替年报
+      二季度（4-6月）：优先年报（YYYY1231），无年报则用三季报（YYYY0930）
+      三、四季度（7-12月）：直接用年报（YYYY1231）
+    """
+    quarter = get_current_quarter()
+
+    if quarter == 1:
+        # 一季度：年报尚未披露完，用三季报代替
+        df = fetch_fina_data(symbols, latest_year, end_date=f'{latest_year}0930')
+        logger.info(f"最新年份 {latest_year}：当前一季度，使用三季报（{latest_year}0930）代替年报")
+        return df
+
+    if quarter >= 3:
+        # 三、四季度：年报已充分披露
+        df = fetch_fina_data(symbols, latest_year)
+        logger.info(f"最新年份 {latest_year}：当前{quarter}季度，直接使用年报（{latest_year}1231）")
+        return df
+
+    # 二季度：年报优先，缺失股票用三季报补充
+    df_annual  = fetch_fina_data(symbols, latest_year)                              # 年报
+    df_q3      = fetch_fina_data(symbols, latest_year, end_date=f'{latest_year}0930')  # 三季报
+
+    annual_codes = set(df_annual['ts_code'].tolist()) if not df_annual.empty else set()
+    q3_codes     = set(df_q3['ts_code'].tolist())     if not df_q3.empty  else set()
+    fallback_codes = q3_codes - annual_codes           # 只有三季报、无年报的股票
+
+    if fallback_codes:
+        df_fallback = df_q3[df_q3['ts_code'].isin(fallback_codes)]
+        df_merged   = pd.concat([df_annual, df_fallback], ignore_index=True)
+        logger.info(
+            f"最新年份 {latest_year}：二季度，年报 {len(annual_codes)} 条，"
+            f"三季报补充 {len(fallback_codes)} 条"
+        )
+        return df_merged
+
+    logger.info(f"最新年份 {latest_year}：二季度，年报 {len(annual_codes)} 条，无需三季报补充")
+    return df_annual
 
 
 # ── Handler 类 ────────────────────────────────────────────────────────────────
@@ -138,12 +189,17 @@ class ValueMatrixHandler:
         years  = get_recent_years(MULTI_YEAR_COUNT)
         x_col  = 'grossprofit_margin' if metric == 'gross' else 'netprofit_margin'
 
-        # 逐年拉取（复用单年缓存，无网络调用时 O(1)）
+        # 逐年查询（复用单年缓存）
+        # 最新年份使用季度感知逻辑，历史年份直接取年报
+        latest_year = years[-1]
         year_dfs: dict = {}
         for y in years:
-            year_dfs[y] = fetch_fina_data(self.symbols, y)
+            if y == latest_year:
+                year_dfs[y] = fetch_latest_year_data(self.symbols, y)
+            else:
+                year_dfs[y] = fetch_fina_data(self.symbols, y)
 
-        # 为方便 O(1) 查找，将每年 DataFrame 转成 {ts_code: row_dict}
+        # 转成 {ts_code: row_dict} 便于 O(1) 查找
         year_maps: dict = {}
         for y, df in year_dfs.items():
             year_maps[y] = df.set_index('ts_code').to_dict(orient='index') if not df.empty else {}
@@ -174,7 +230,6 @@ class ValueMatrixHandler:
             product = 1.0
             for f in g_factors:
                 product *= f
-            # 负乘积时保留符号再开方（奇数次根对负数合法）
             n = len(g_factors)
             if product < 0:
                 cagr = -((-product) ** (1.0 / n) + 1.0) * 100.0
@@ -210,14 +265,19 @@ class ValueMatrixHandler:
             result = {
                 'stocks':     stocks,
                 'count':      len(stocks),
-                'year_range': [years[0], years[-1]],   # [2021, 2025]
+                'year_range': [years[0], years[-1]],
             }
             value_cache.set(chart_cache_key, result, ttl=3600)
             logger.info(f"handle_data_api：近{MULTI_YEAR_COUNT}年({years[0]}-{years[-1]}) {metric}，有效数据 {len(stocks)} 条")
             return 200, result
 
         # ── 单年模式 ────────────────────────────────────────────────────
-        raw_df = fetch_fina_data(self.symbols, year)
+        # 最新年份使用季度感知逻辑，与近5年中最新年的数据来源保持一致
+        latest_year = AVAILABLE_YEARS[0]
+        if year == latest_year:
+            raw_df = fetch_latest_year_data(self.symbols, year)
+        else:
+            raw_df = fetch_fina_data(self.symbols, year)
         x_col  = 'grossprofit_margin' if metric == 'gross' else 'netprofit_margin'
 
         stocks = []
@@ -259,7 +319,6 @@ class ValueMatrixHandler:
         if not raw_stocks:
             return 400, {'error': '预期数据为空'}
 
-        # 基本校验：x/y 必须存在且可转为整数
         stocks = []
         for s in raw_stocks:
             try:

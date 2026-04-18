@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Flask 后端",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["run.py"],
+      "port": 8888
+    },
+    {
+      "name": "Vite 前端",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "desktop", "run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "Electron 桌面端",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "desktop", "run", "electron:dev"],
+      "port": null
+    }
+  ]
+}

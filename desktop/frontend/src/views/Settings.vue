@@ -114,7 +114,7 @@
                 :key="p.id"
                 class="vrm-preset-btn"
                 :class="{ active: form.vrmPreset === p.id }"
-                @click="form.vrmPreset = p.id"
+                @click="selectVrmPreset(p.id)"
                 :title="p.desc"
               >
                 <span class="vrm-preset-icon">{{ p.icon }}</span>
@@ -259,7 +259,7 @@ const form = reactive({
   apiUrl: 'https://api.openai.com/v1',
   model: 'gpt-4o',
   systemPrompt: DEFAULT_SYSTEM_PROMPT,
-  vrmPreset: 'official',   // official | vroid_base | custom
+  vrmPreset: 'avatar_b',   // official | vroid_base | avatar_b | glb_custom | custom
   scenePreset: 'auto',     // auto | dark | light
   ttsEnabled: true,
   ttsVoiceUri: '',
@@ -267,6 +267,7 @@ const form = reactive({
 })
 
 const VRM_PRESETS = [
+  { id: 'avatar_b',    label: 'AvatarSample B', icon: '🧍', desc: '本地 VRM 模型，白色背景，手自然下垂' },
   { id: 'official',    label: '官方示例',  icon: '🧍', desc: 'three-vrm 默认模型' },
   { id: 'vroid_base',  label: 'VRoid 素体', icon: '👩', desc: 'VRoid Studio 女性素体' },
   { id: 'custom',      label: '自定义',    icon: '🔧', desc: '粘贴 URL 或选择本地文件' },
@@ -430,6 +431,13 @@ async function testConnection() {
   }
 }
 
+function selectVrmPreset(id) {
+  form.vrmPreset = id
+  if (id === 'avatar_b') {
+    form.scenePreset = 'light'
+  }
+}
+
 function onVrmFile(e) {
   const file = e.target.files?.[0]
   if (!file) return
@@ -442,6 +450,7 @@ function onVrmFile(e) {
 function saveVrmSettings() {
   const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
   data.vrmPreset = form.vrmPreset
+  data.vrmPresetUserSet = true   // 标记为用户主动选择
   data.scenePreset = form.scenePreset
   data.vrmUrl = form.vrmUrl
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
@@ -491,7 +500,18 @@ function testTTS() {
 }
 
 function saveSettings() {
-  const data = { ...form }
+  // 只保存 API/对话相关字段，VRM/场景设置由 saveVrmSettings 单独管理
+  const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+  const data = {
+    ...existing,
+    provider:     form.provider,
+    apiKey:       form.apiKey,
+    apiUrl:       form.apiUrl,
+    model:        form.model,
+    systemPrompt: form.systemPrompt,
+    ttsEnabled:   form.ttsEnabled,
+    ttsVoiceUri:  form.ttsVoiceUri,
+  }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
   saveStatus.value = 'saved'
   setTimeout(() => { saveStatus.value = '' }, 2000)

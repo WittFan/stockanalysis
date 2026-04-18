@@ -93,14 +93,25 @@
 import { ref, computed, onMounted } from 'vue'
 import EChartsWrapper from '@/components/EChartsWrapper.vue'
 
-// 年份列表：单年 + 近5年聚合
+// ── 年份列表：近5年聚合 + 最近5个单年（动态生成）──────────────────────────
+// 最新年份根据当前季度标注数据来源
+const _today       = new Date()
+const _curQuarter  = Math.floor(_today.getMonth() / 3) + 1   // 1~4
+const _latestYear  = _today.getFullYear() - 1                 // 上一个完整年度
+
+function _latestYearLabel(y, q) {
+  if (q === 1) return `${y}年（三季报替代）`
+  if (q === 2) return `${y}（无年报的用三季报）`
+  return `${y}年报`
+}
+
 const YEAR_ITEMS = [
-  { val: '5y',  label: '近 5 年' },
-  { val: 2024,  label: '2024 年报' },
-  { val: 2023,  label: '2023 年报' },
-  { val: 2022,  label: '2022 年报' },
-  { val: 2021,  label: '2021 年报' },
-  { val: 2020,  label: '2020 年报' },
+  { val: '5y', label: '近 5 年' },
+  { val: _latestYear,     label: _latestYearLabel(_latestYear, _curQuarter) },
+  { val: _latestYear - 1, label: `${_latestYear - 1} 年报` },
+  { val: _latestYear - 2, label: `${_latestYear - 2} 年报` },
+  { val: _latestYear - 3, label: `${_latestYear - 3} 年报` },
+  { val: _latestYear - 4, label: `${_latestYear - 4} 年报` },
 ]
 
 const mode      = ref('past')
@@ -113,6 +124,23 @@ const stocks    = ref([])
 const fcStocks  = ref([])
 
 let fcTimer = null
+
+// ── 离群值检测辅助函数 ──────────────────────────────────────────────────────
+function calcPercentile(arr, p) {
+  if (!arr.length) return 0
+  const sorted = [...arr].sort((a, b) => a - b)
+  const idx = (p / 100) * (sorted.length - 1)
+  const lo = Math.floor(idx), hi = Math.ceil(idx)
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo)
+}
+
+function calcOutlierBounds(vals) {
+  if (vals.length < 4) return { lo: -Infinity, hi: Infinity }
+  const q1 = calcPercentile(vals, 25)
+  const q3 = calcPercentile(vals, 75)
+  const iqr = q3 - q1
+  return { lo: q1 - 1.5 * iqr, hi: q3 + 1.5 * iqr }
+}
 
 const chartOption = computed(() => {
   const metricName = metric.value === 'gross' ? '销售毛利率' : '销售净利率'
@@ -136,6 +164,53 @@ const chartOption = computed(() => {
     ? '近5年营收增长率（几何平均）(%)'
     : '营业收入同比增长率(%)'
 
+  // ── 离群值处理 ──────────────────────────────────────────────────────────
+  const pts = stocks.value
+  const xBounds = calcOutlierBounds(pts.map(s => s.x))
+  const yBounds = calcOutlierBounds(pts.map(s => s.y))
+
+  // 轴范围：IQR 边界再加 5% padding
+  const xPad = Math.max((xBounds.hi - xBounds.lo) * 0.05, 2)
+  const yPad = Math.max((yBounds.hi - yBounds.lo) * 0.05, 2)
+  const xMin = isFinite(xBounds.lo) ? Math.floor(xBounds.lo - xPad) : undefined
+  const xMax = isFinite(xBounds.hi) ? Math.ceil(xBounds.hi  + xPad) : undefined
+  const yMin = isFinite(yBounds.lo) ? Math.floor(yBounds.lo - yPad) : undefined
+  const yMax = isFinite(yBounds.hi) ? Math.ceil(yBounds.hi  + yPad) : undefined
+
+  const normalData   = []  // [x, y, name, code, realX, realY, '']
+  const outlierData  = []  // 同上，clamped position + 方向箭头
+
+  for (const s of pts) {
+    const outX = xMin !== undefined && (s.x < xMin || s.x > xMax)
+    const outY = yMin !== undefined && (s.y < yMin || s.y > yMax)
+    if (outX || outY) {
+      const cx = xMin !== undefined ? Math.min(xMax, Math.max(xMin, s.x)) : s.x
+      const cy = yMin !== undefined ? Math.min(yMax, Math.max(yMin, s.y)) : s.y
+      let dir = ''
+      if (s.x > xMax) dir += '→'
+      if (s.x < xMin) dir += '←'
+      if (s.y > yMax) dir += '↑'
+      if (s.y < yMin) dir += '↓'
+      outlierData.push([cx, cy, s.name, s.code, s.x, s.y, dir])
+    } else {
+      normalData.push([s.x, s.y, s.name, s.code, s.x, s.y, ''])
+    }
+  }
+
+  const tooltipFmt = p => {
+    const [, , name, code, realX, realY, dir] = p.data
+    const isOut = dir !== ''
+    const badge = isOut
+      ? `<span style="color:#ff9500;font-size:11px;margin-left:4px">异常值 ${dir}</span>`
+      : ''
+    return [
+      `<b style="color:#1c1c1e">${name}</b>${badge}`,
+      `<span style="color:#8e8e93;font-size:12px">${code}</span>`,
+      `${xLabel}：<b>${realX}%</b>`,
+      `营收增长率：<b>${realY}%</b>`,
+    ].join('<br>')
+  }
+
   return {
     backgroundColor: '#ffffff',
     title: {
@@ -154,7 +229,7 @@ const chartOption = computed(() => {
       borderColor: '#e5e5ea',
       borderWidth: 0.5,
       textStyle: { color: '#1c1c1e', fontSize: 13 },
-      formatter: p => `<b style="color:#1c1c1e">${p.data[2]}</b><br><span style="color:#8e8e93;font-size:12px">${p.data[3]}</span><br>${xLabel}：<b>${p.data[0]}%</b><br>营收增长率：<b>${p.data[1]}%</b>`,
+      formatter: tooltipFmt,
     },
     xAxis: {
       type: 'value',
@@ -166,6 +241,8 @@ const chartOption = computed(() => {
       axisLine: { lineStyle: { color: '#e5e5ea', width: 0.5 } },
       axisTick: { lineStyle: { color: '#e5e5ea' } },
       splitLine: { lineStyle: { color: '#f2f2f7', width: 1 } },
+      min: xMin,
+      max: xMax,
     },
     yAxis: {
       type: 'value',
@@ -177,28 +254,50 @@ const chartOption = computed(() => {
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: '#f2f2f7', width: 1 } },
+      min: yMin,
+      max: yMax,
     },
     grid: { top: 60, bottom: 58, left: 80, right: 24 },
-    series: [{
-      type: 'scatter',
-      data: stocks.value.map(s => [s.x, s.y, s.name, s.code]),
-      symbolSize: 11,
-      itemStyle: { color: '#007aff', opacity: 0.75 },
-      emphasis: { itemStyle: { color: '#5856d6', opacity: 1 }, scale: 1.4 },
-      label: {
-        show: true,
-        formatter: p => p.data[2],
-        fontSize: 11,
-        color: '#3c3c43',
-        position: 'right',
+    series: [
+      {
+        name: '正常',
+        type: 'scatter',
+        data: normalData,
+        symbolSize: 11,
+        itemStyle: { color: '#007aff', opacity: 0.75 },
+        emphasis: { itemStyle: { color: '#5856d6', opacity: 1 }, scale: 1.4 },
+        label: {
+          show: true,
+          formatter: p => p.data[2],
+          fontSize: 11,
+          color: '#3c3c43',
+          position: 'right',
+        },
+        markLine: {
+          silent: true,
+          symbol: 'none',
+          lineStyle: { color: '#c6c6c8', type: 'dashed', width: 0.8 },
+          data: [{ xAxis: 0 }, { yAxis: 0 }],
+        },
       },
-      markLine: {
-        silent: true,
-        symbol: 'none',
-        lineStyle: { color: '#c6c6c8', type: 'dashed', width: 0.8 },
-        data: [{ xAxis: 0 }, { yAxis: 0 }],
+      {
+        name: '异常值',
+        type: 'scatter',
+        data: outlierData,
+        symbol: 'diamond',
+        symbolSize: 13,
+        itemStyle: { color: '#ff9500', opacity: 0.9, borderColor: '#e65c00', borderWidth: 1 },
+        emphasis: { itemStyle: { color: '#ff6b00', opacity: 1 }, scale: 1.4 },
+        label: {
+          show: true,
+          formatter: p => `${p.data[6]}${p.data[2]}`,
+          fontSize: 11,
+          color: '#c65200',
+          fontWeight: 500,
+          position: 'right',
+        },
       },
-    }],
+    ],
   }
 })
 

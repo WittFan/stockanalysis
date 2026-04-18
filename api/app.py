@@ -15,7 +15,7 @@ Electron 桌面端：
 """
 from pathlib import Path
 
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 from loguru import logger
 
@@ -53,12 +53,24 @@ def create_app(xlsx_path: str = None, root_path: Path = None) -> Flask:
     from api.routes.value import make_value_bp
     from api.routes.health import bp as health_bp
     from api.routes.download import make_download_bp
+    from api.routes.assistant import bp as assistant_bp
 
     app.register_blueprint(make_chart_bp(chart_handler),       url_prefix='/api')
     app.register_blueprint(make_backtest_bp(backtest_handler),  url_prefix='/api')
     app.register_blueprint(make_value_bp(value_handler),        url_prefix='/api')
     app.register_blueprint(health_bp,                           url_prefix='/api')
     app.register_blueprint(make_download_bp(download_handler),  url_prefix='/api')
+    app.register_blueprint(assistant_bp,                        url_prefix='/api')
+
+    # ── 模型文件（Electron 回落到 Flask 时直接提供 VRM/GLB）────────────────
+    public_models = Path(__file__).parent.parent / 'desktop' / 'frontend' / 'public' / 'models'
+
+    @app.route('/models/<path:filename>')
+    def serve_model(filename):
+        # 优先从 dist/models（生产），否则从 public/models（开发）
+        dist_models = dist_dir / 'models'
+        folder = str(dist_models) if dist_models.exists() else str(public_models)
+        return send_from_directory(folder, filename)
 
     # ── SPA fallback（生产模式：Flask 托管前端静态文件）──────────────────────
     if dist_dir.exists():

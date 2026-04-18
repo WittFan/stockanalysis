@@ -19,6 +19,23 @@ export default defineConfig(({ command }) => ({
         target: 'http://localhost:8888',
         changeOrigin: true,
       },
+      // LLM API 代理（解决浏览器开发模式 CORS 限制）
+      '/proxy/openai': {
+        target: 'https://api.openai.com',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/proxy\/openai/, ''),
+      },
+      '/proxy/kimi': {
+        target: 'https://api.kimi.com',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/proxy\/kimi/, ''),
+        secure: true,
+      },
+      '/proxy/anthropic': {
+        target: 'https://api.anthropic.com',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/proxy\/anthropic/, ''),
+      },
     },
   },
   build: {

@@ -42,6 +42,7 @@ const isDev = !app.isPackaged
 
 let mainWindow     = null
 let backendProcess = null
+let viteProcess    = null
 let splashWindow   = null
 
 
@@ -53,6 +54,37 @@ function checkViteRunning() {
       res.resume()
       resolve(res.statusCode < 500)
     }).on('error', () => resolve(false))
+  })
+}
+
+// 若 Vite 未运行则自动启动，返回 Promise<void>（等到 Vite 就绪）
+function ensureVite() {
+  return new Promise(async (resolve) => {
+    const alreadyUp = await checkViteRunning()
+    if (alreadyUp) { resolve(); return }
+
+    console.log('[vite] 自动启动 Vite dev server…')
+    const desktopDir = path.join(__dirname, '..')
+    viteProcess = spawn(
+      process.platform === 'win32' ? 'npm.cmd' : 'npm',
+      ['run', 'dev'],
+      { cwd: desktopDir, stdio: 'ignore', detached: false }
+    )
+    viteProcess.on('error', err => console.error('[vite] 启动失败:', err))
+
+    // 轮询直到 Vite 就绪（最多等 30s）
+    const deadline = Date.now() + 30000
+    const poll = setInterval(async () => {
+      if (await checkViteRunning()) {
+        clearInterval(poll)
+        console.log('[vite] Vite dev server 已就绪')
+        resolve()
+      } else if (Date.now() > deadline) {
+        clearInterval(poll)
+        console.warn('[vite] 等待超时，回落到 Flask')
+        resolve()
+      }
+    }, 500)
   })
 }
 
@@ -218,14 +250,15 @@ function createWindow() {
   })
 
   if (isDev) {
-    // 优先使用 Vite 热更新服务（需另开终端 npm run dev）；
-    // 若 Vite 未运行，则直接加载 Flask 托管的构建产物。
-    checkViteRunning().then(viteUp => {
-      const url = viteUp
-        ? `http://127.0.0.1:${VITE_PORT}`
-        : `http://127.0.0.1:${BACKEND_PORT}`
-      console.log(`[electron] 加载前端：${url}`)
-      mainWindow.loadURL(url)
+    // 自动确保 Vite dev server 已就绪，再加载前端
+    ensureVite().then(() => {
+      checkViteRunning().then(viteUp => {
+        const url = viteUp
+          ? `http://127.0.0.1:${VITE_PORT}`
+          : `http://127.0.0.1:${BACKEND_PORT}`
+        console.log(`[electron] 加载前端：${url}`)
+        mainWindow.loadURL(url)
+      })
     })
     // DevTools 默认不打开，需要时手动通过菜单「视图→开发者工具」或 Cmd+Option+I 打开
   } else {
@@ -393,5 +426,11 @@ app.on('before-quit', () => {
     console.log('[backend] 正在关闭…')
     backendProcess.kill('SIGTERM')
     backendProcess = null
+  }
+  // 退出前杀掉 Vite 进程（若是 Electron 自动启动的）
+  if (viteProcess) {
+    console.log('[vite] 正在关闭…')
+    viteProcess.kill('SIGTERM')
+    viteProcess = null
   }
 })

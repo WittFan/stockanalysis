@@ -155,22 +155,6 @@ html, body {
   -webkit-app-region: no-drag;
 }
 
-.sa-nav .logo {
-  font-size: var(--size-headline);
-  font-weight: 600;
-  letter-spacing: var(--tracking-tight);
-  color: var(--label);
-  white-space: nowrap;
-  margin-right: var(--space-5);
-}
-
-.sa-nav .nav-sep {
-  width: 0.5px;
-  height: 16px;
-  background: var(--separator);
-  margin-right: var(--space-4);
-  flex-shrink: 0;
-}
 
 .nav-btn {
   color: var(--label-muted);

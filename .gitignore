@@ -27,6 +27,10 @@ data/*.xlsx
 *.swp
 *.swo
 
+# Claude
+.claude/worktrees/
+
+
 # Jupyter
 .ipynb_checkpoints/
 
@@ -42,8 +46,11 @@ config.py
 windows_service/config.py
 
 # Node.js / Electron（统一在 desktop/ 目录下管理）
+node_modules/
 desktop/node_modules/
+desktop/frontend/node_modules/
 desktop/package-lock.json
+
 
 # 前端构建产物（发布时单独处理）
 desktop/frontend/dist/

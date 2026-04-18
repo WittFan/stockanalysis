@@ -171,30 +171,36 @@ const STORAGE_KEY = 'assistant_settings'
 
 // 模型预设映射
 const VRM_PRESET_URLS = {
-  official:   'https://cdn.jsdelivr.net/gh/pixiv/three-vrm@3.5.1/packages/three-vrm/examples/models/VRM1_Constraint_Twist_Sample.vrm',
-  vroid_base: window.electronAPI?.isElectron
-    ? './models/vroid_female.vrm'
-    : '/models/vroid_female.vrm',
+  official:    'https://cdn.jsdelivr.net/gh/pixiv/three-vrm@3.5.1/packages/three-vrm/examples/models/VRM1_Constraint_Twist_Sample.vrm',
+  vroid_base:  window.electronAPI?.isElectron ? './models/vroid_female.vrm'      : '/models/vroid_female.vrm',
+  avatar_b:    window.electronAPI?.isElectron ? './models/AvatarSample_B.vrm'    : '/models/AvatarSample_B.vrm',
+  glb_custom:  window.electronAPI?.isElectron ? './models/textured_mesh.glb'     : '/models/textured_mesh.glb',
 }
 
 function getDefaultVrmUrl() {
-  const settings = loadSettings()
-  const preset = settings.vrmPreset || 'official'
-  if (preset === 'custom') return settings.vrmUrl || ''
-  return VRM_PRESET_URLS[preset] || VRM_PRESET_URLS.official
+  const preset = getVrmPreset()   // 统一走 vrmPresetUserSet 判断
+  if (preset === 'custom') return loadSettings().vrmUrl || ''
+  return VRM_PRESET_URLS[preset] || VRM_PRESET_URLS.avatar_b
 }
 
 function getVrmPreset() {
-  return loadSettings().vrmPreset || 'official'
+  const s = loadSettings()
+  // 只有用户在设置页主动保存过 VRM 配置才信任存储值，否则使用新默认
+  return (s.vrmPresetUserSet && s.vrmPreset) ? s.vrmPreset : 'avatar_b'
+}
+
+// 判断是否为纯 GLB（非 VRM）
+function isGLBModel(url) {
+  return url?.toLowerCase().endsWith('.glb') && getVrmPreset() === 'glb_custom'
 }
 
 function getScenePreset() {
   const settings = loadSettings()
   const scene = settings.scenePreset || 'auto'
   if (scene !== 'auto') return scene
-  // auto 映射：official -> dark, vroid_base -> light
-  const vrm = settings.vrmPreset || 'official'
-  return vrm === 'vroid_base' ? 'light' : 'dark'
+  // auto 映射：通过 getVrmPreset() 拿到真实生效的预设
+  const vrm = getVrmPreset()
+  return (vrm === 'vroid_base' || vrm === 'glb_custom' || vrm === 'avatar_b') ? 'light' : 'dark'
 }
 
 // 场景配置表
@@ -236,7 +242,7 @@ const SCENE_CONFIGS = {
     tipColor: '#ff9090',
   },
   light: {
-    bg: 0xf8f8fa,
+    bg: 0xffffff,
     exposure: 1.25,
     ambient: { color: 0xfff8f5, intensity: 0.85 },
     key: { color: 0xffecd8, intensity: 1.9, pos: [1.2, 3, 1.8] },
@@ -673,6 +679,9 @@ function pushAssistant(text) {
 // ── Three.js + VRM ────────────────────────────────────────
 let renderer, scene, camera, animFrameId, clock
 let currentVRM = null
+let currentGLB = null         // 纯 GLB 场景（非 VRM）
+let glbEmotionLight = null    // GLB 情绪点光源
+let glbBaseY = 0              // GLB 模型初始 Y 坐标
 
 const vrmLoading  = ref(false)
 const vrmError    = ref('')
@@ -713,8 +722,8 @@ function initThree() {
   }
 
   camera = new THREE.PerspectiveCamera(22, w / h, 0.1, 50)
-  camera.position.set(0, 0.56, 2.0)
-  camera.lookAt(0, 0.54, 0)
+  camera.position.set(0, 0.36, 2.0)
+  camera.lookAt(0, 0.34, 0)
 
   renderer = new THREE.WebGLRenderer({ canvas: canvasRef.value, antialias: true, alpha: false })
   renderer.setSize(w, h)
@@ -797,13 +806,90 @@ async function loadVRM(url) {
   vrmError.value   = ''
   vrmProgress.value = 0
 
-  // 清除旧模型
+  // 清除旧 VRM 模型
   if (currentVRM) {
     scene.remove(currentVRM.scene)
     VRMUtils.deepDispose(currentVRM.scene)
     currentVRM = null
   }
+  // 清除旧 GLB 模型
+  if (currentGLB) {
+    scene.remove(currentGLB)
+    currentGLB.traverse(obj => {
+      if (obj.geometry) obj.geometry.dispose()
+      if (obj.material) {
+        if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose())
+        else obj.material.dispose()
+      }
+    })
+    currentGLB = null
+  }
 
+  // 纯 GLB 模型（非 VRM）
+  if (isGLBModel(url)) {
+    const loader = new GLTFLoader()
+    try {
+      const gltf = await new Promise((resolve, reject) => {
+        loader.load(
+          url,
+          resolve,
+          (e) => { if (e.total) vrmProgress.value = Math.round(e.loaded / e.total * 100) },
+          reject,
+        )
+      })
+
+      const glbScene = gltf.scene
+
+      // 自动计算模型包围盒，居中并缩放到合适高度
+      const box = new THREE.Box3().setFromObject(glbScene)
+      const size = new THREE.Vector3(); box.getSize(size)
+      const center = new THREE.Vector3(); box.getCenter(center)
+      const targetHeight = 1.6   // 期望显示高度（米）
+      const scale = targetHeight / Math.max(size.y, 0.001)
+      glbScene.scale.setScalar(scale)
+
+      // 将模型底部对齐地面，XZ 居中
+      glbScene.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale)
+
+      scene.add(glbScene)
+      currentGLB = glbScene
+      glbBaseY   = glbScene.position.y
+
+      // 根据包围球半径自动计算合适相机距离（视角 28°，保证模型整体在画面内）
+      const sphere = new THREE.Sphere()
+      new THREE.Box3().setFromObject(glbScene).getBoundingSphere(sphere)
+      const fovRad = 28 * Math.PI / 180
+      const camDist = sphere.radius / Math.tan(fovRad / 2) * 1.3
+      camera.fov = 28
+      camera.updateProjectionMatrix()
+      camera.position.set(0, sphere.center.y, sphere.center.z + camDist)
+      camera.lookAt(0, sphere.center.y, sphere.center.z)
+
+      // 情绪点光源：放在模型正面，随状态变色
+      if (glbEmotionLight) scene.remove(glbEmotionLight)
+      glbEmotionLight = new THREE.PointLight(0x80ff80, 1.2, sphere.radius * 4)
+      glbEmotionLight.position.set(0, sphere.center.y, sphere.center.z + sphere.radius * 1.2)
+      scene.add(glbEmotionLight)
+
+      // 开启材质 emissive（让颜色切换可见）
+      glbScene.traverse(obj => {
+        if (obj.isMesh && obj.material) {
+          const mats = Array.isArray(obj.material) ? obj.material : [obj.material]
+          mats.forEach(m => { if (m.emissive !== undefined) m.emissiveIntensity = 0.12 })
+        }
+      })
+
+      vrmProgress.value = 100
+      vrmLoading.value  = false
+
+    } catch (e) {
+      vrmError.value   = e.message || 'GLB 加载失败'
+      vrmLoading.value = false
+    }
+    return
+  }
+
+  // VRM 模型
   const loader = new GLTFLoader()
   loader.register(parser => new VRMLoaderPlugin(parser))
 
@@ -832,19 +918,19 @@ async function loadVRM(url) {
       vrm.scene.rotation.y = 0
     }
 
-    // 修正 T-pose：官方示例和 VRoid 素体都将手臂和手部下垂到自然姿态
-    if (vrmPreset === 'official' || vrmPreset === 'vroid_base') {
+    // 修正 T-pose：手臂和手部下垂到自然姿态
+    if (vrmPreset === 'official' || vrmPreset === 'vroid_base' || vrmPreset === 'avatar_b') {
       const lShoulder = vrm.humanoid?.getNormalizedBoneNode(VRMHumanBoneName.LeftUpperArm)
       const rShoulder = vrm.humanoid?.getNormalizedBoneNode(VRMHumanBoneName.RightUpperArm)
       const lForearm  = vrm.humanoid?.getNormalizedBoneNode(VRMHumanBoneName.LeftLowerArm)
       const rForearm  = vrm.humanoid?.getNormalizedBoneNode(VRMHumanBoneName.RightLowerArm)
       const lHand     = vrm.humanoid?.getNormalizedBoneNode(VRMHumanBoneName.LeftHand)
       const rHand     = vrm.humanoid?.getNormalizedBoneNode(VRMHumanBoneName.RightHand)
-      if (lShoulder) lShoulder.rotation.z = -1.15   // 左臂向下
-      if (rShoulder) rShoulder.rotation.z =  1.15   // 右臂向下
-      if (lForearm)  lForearm.rotation.z  = -0.15  // 小幅弯曲前臂
+      if (lShoulder) lShoulder.rotation.z = -1.15
+      if (rShoulder) rShoulder.rotation.z =  1.15
+      if (lForearm)  lForearm.rotation.z  = -0.15
       if (rForearm)  rForearm.rotation.z  =  0.15
-      if (lHand)     { lHand.rotation.z = -0.15; lHand.rotation.y = -0.25 } // 手掌向内贴腿
+      if (lHand)     { lHand.rotation.z = -0.15; lHand.rotation.y = -0.25 }
       if (rHand)     { rHand.rotation.z =  0.15; rHand.rotation.y =  0.25 }
     }
 
@@ -855,6 +941,7 @@ async function loadVRM(url) {
     currentVRM = vrm
     vrmProgress.value = 100
     vrmLoading.value  = false
+
 
   } catch (e) {
     vrmError.value   = e.message || '加载失败'
@@ -948,9 +1035,9 @@ function resetPose() {
   resetBone(VRMHumanBoneName.Hips)
   resetBone(VRMHumanBoneName.Neck)
 
-  // 官方示例和 VRoid 素体都需要重新应用 T-pose 修正
+  // 需要重新应用 T-pose 修正的预设
   const preset = getVrmPreset()
-  if (preset !== 'official' && preset !== 'vroid_base') return
+  if (preset !== 'official' && preset !== 'vroid_base' && preset !== 'avatar_b') return
   const lShoulder = h.getNormalizedBoneNode(VRMHumanBoneName.LeftUpperArm)
   const rShoulder = h.getNormalizedBoneNode(VRMHumanBoneName.RightUpperArm)
   const lForearm  = h.getNormalizedBoneNode(VRMHumanBoneName.LeftLowerArm)
@@ -1061,6 +1148,92 @@ function updateExpression(delta) {
   }
 }
 
+// vrm.update() 之后再修正手臂，直接写 raw bone 绕过约束系统
+function applyArmCorrection() {
+  if (!currentVRM?.humanoid) return
+  const preset = getVrmPreset()
+  if (preset !== 'official' && preset !== 'vroid_base' && preset !== 'avatar_b') return
+
+  // getRawBoneNode 拿到实际渲染骨骼，不受 VRM 约束层影响
+  const getRaw = name => currentVRM.humanoid.getRawBoneNode?.(name)
+    ?? currentVRM.humanoid.getNormalizedBoneNode(name)
+
+  const lShoulder = getRaw(VRMHumanBoneName.LeftUpperArm)
+  const rShoulder = getRaw(VRMHumanBoneName.RightUpperArm)
+  const lForearm  = getRaw(VRMHumanBoneName.LeftLowerArm)
+  const rForearm  = getRaw(VRMHumanBoneName.RightLowerArm)
+  const lHand     = getRaw(VRMHumanBoneName.LeftHand)
+  const rHand     = getRaw(VRMHumanBoneName.RightHand)
+
+  const mode = animMode.value
+  // 只在待机时强制修正，动作模式由 updateGesture 接管
+  if (mode === 'idle') {
+    if (lShoulder) lShoulder.rotation.z = -1.15
+    if (rShoulder) rShoulder.rotation.z =  1.15
+    if (lForearm)  lForearm.rotation.z  = -0.15
+    if (rForearm)  rForearm.rotation.z  =  0.15
+    if (lHand)     { lHand.rotation.z = -0.15; lHand.rotation.y = -0.25 }
+    if (rHand)     { rHand.rotation.z =  0.15; rHand.rotation.y =  0.25 }
+  }
+}
+
+// ── GLB 程序化动画 ────────────────────────────────────────
+
+// 情绪光颜色配置
+const GLB_EMOTION = {
+  idle:     { light: new THREE.Color(0x60ff80), intensity: 0.9,  emissive: new THREE.Color(0x041a08) },
+  thinking: { light: new THREE.Color(0x4090ff), intensity: 1.4,  emissive: new THREE.Color(0x040c20) },
+  talking:  { light: new THREE.Color(0xff80b0), intensity: 1.8,  emissive: new THREE.Color(0x1a0808) },
+}
+
+// 当前插值状态
+let glbLightColor  = new THREE.Color(0x60ff80)
+let glbEmissive    = new THREE.Color(0x041a08)
+
+function updateGLBAnimation(t, delta) {
+  if (!currentGLB) return
+  const state  = charState.value
+  const cfg    = GLB_EMOTION[state] || GLB_EMOTION.idle
+
+  // 1. 整体姿态动画
+  if (state === 'talking') {
+    // 说话：上下弹跳 + 左右轻摆
+    currentGLB.position.y = glbBaseY + Math.abs(Math.sin(t * 10)) * 0.025
+    currentGLB.rotation.z = Math.sin(t * 9) * 0.035
+    currentGLB.rotation.y = Math.sin(t * 0.5) * 0.15
+  } else if (state === 'thinking') {
+    // 思考：慢速左右倾斜，微微点头
+    currentGLB.position.y = glbBaseY + Math.sin(t * 1.2) * 0.008
+    currentGLB.rotation.z = Math.sin(t * 1.5) * 0.07 + 0.05
+    currentGLB.rotation.y = Math.sin(t * 0.4) * 0.1
+  } else {
+    // 待机：缓慢自转 + 呼吸起伏
+    currentGLB.position.y = glbBaseY + Math.sin(t * 0.9) * 0.008
+    currentGLB.rotation.z = Math.sin(t * 0.5) * 0.018
+    currentGLB.rotation.y = Math.sin(t * 0.3) * 0.25
+  }
+
+  // 2. 情绪光颜色平滑插值
+  glbLightColor.lerp(cfg.light, delta * 3)
+  glbEmissive.lerp(cfg.emissive, delta * 3)
+  if (glbEmotionLight) {
+    glbEmotionLight.color.copy(glbLightColor)
+    glbEmotionLight.intensity += (cfg.intensity - glbEmotionLight.intensity) * delta * 3
+    // 说话时光源轻微脉动
+    if (state === 'talking') {
+      glbEmotionLight.intensity = cfg.intensity + Math.sin(t * 12) * 0.3
+    }
+  }
+
+  // 3. 材质 emissive 颜色
+  currentGLB.traverse(obj => {
+    if (obj.isMesh && obj.material) {
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material]
+      mats.forEach(m => { if (m.emissive !== undefined) m.emissive.copy(glbEmissive) })
+    }
+  })
+}
+
 function animate() {
   animFrameId = requestAnimationFrame(animate)
   const delta = clock.getDelta()
@@ -1074,6 +1247,12 @@ function animate() {
     updateLipSync(t)
     updateExpression(delta)
     currentVRM.update(delta)
+    // VRM 约束（vrm.update）执行后再覆写手臂旋转，防止约束系统还原 T-pose
+    applyArmCorrection()
+  }
+
+  if (currentGLB) {
+    updateGLBAnimation(t, delta)
   }
 
   renderer.render(scene, camera)
@@ -1092,6 +1271,18 @@ onMounted(() => {
 onUnmounted(() => {
   cancelAnimationFrame(animFrameId)
   if (currentVRM) { VRMUtils.deepDispose(currentVRM.scene); currentVRM = null }
+  if (glbEmotionLight) { scene?.remove(glbEmotionLight); glbEmotionLight = null }
+  if (currentGLB) {
+    scene?.remove(currentGLB)
+    currentGLB.traverse(obj => {
+      if (obj.geometry) obj.geometry.dispose()
+      if (obj.material) {
+        if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose())
+        else obj.material.dispose()
+      }
+    })
+    currentGLB = null
+  }
   renderer?.dispose()
   if (window._vrmResizeObs) { window._vrmResizeObs.disconnect(); delete window._vrmResizeObs }
   containerRef.value?.removeEventListener('mousemove', onMouseMove)
