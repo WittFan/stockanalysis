@@ -211,17 +211,6 @@
           </div>
 
           <div class="field-row">
-            <div class="field-label">情感风格</div>
-            <div class="field-control">
-              <select v-model="form.ttsStyle" class="select-input">
-                <option v-for="s in edgeStyles" :key="s.id" :value="s.id">
-                  {{ s.name }}
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <div class="field-row">
             <div class="field-label">语速</div>
             <div class="field-control">
               <select v-model="form.ttsRate" class="select-input">
@@ -491,15 +480,6 @@ const edgeVoices = [
   { voice: 'zh-CN-shaanxi-XiaoniNeural', name: '晓妮', desc: '陕西话' },
 ]
 
-const edgeStyles = [
-  { id: 'default', name: '默认' },
-  { id: 'assistant', name: '助理' },
-  { id: 'chat', name: '闲聊' },
-  { id: 'cheerful', name: '开心' },
-  { id: 'sad', name: '悲伤' },
-  { id: 'angry', name: '生气' },
-]
-
 async function testTTS() {
   try {
     const res = await fetch('/api/tts/speech', {
@@ -510,7 +490,6 @@ async function testTTS() {
         voice: form.ttsVoice,
         rate: form.ttsRate,
         pitch: form.ttsPitch,
-        style: form.ttsStyle,
       }),
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -541,7 +520,7 @@ function saveSettings() {
     ttsVoice:     form.ttsVoice,
     ttsRate:      form.ttsRate,
     ttsPitch:     form.ttsPitch,
-    ttsStyle:     form.ttsStyle,
+  
     ttsVoiceUri:  form.ttsVoiceUri,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data))

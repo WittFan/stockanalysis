@@ -473,7 +473,6 @@ async function speak(rawText) {
         voice: settings.ttsVoice || 'zh-CN-XiaoxiaoNeural',
         rate: settings.ttsRate || '+0%',
         pitch: settings.ttsPitch || '+0Hz',
-        style: settings.ttsStyle || 'default',
       }),
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
