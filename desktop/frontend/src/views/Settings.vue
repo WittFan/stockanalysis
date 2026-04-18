@@ -194,34 +194,53 @@
               <input type="checkbox" v-model="form.ttsEnabled" class="switch-input" />
               <span class="switch-slider" />
             </label>
-            <div class="field-hint">
-              助理回复完成后自动朗读内容
-              <span v-if="form.ttsEnabled" :class="ttsStatus.ok ? 'hint-ok' : 'hint-err'" style="margin-left:8px">
-                {{ ttsStatus.text }}
-              </span>
+            <div class="field-hint">助理回复完成后自动朗读内容（Edge TTS）</div>
+          </div>
+        </div>
+
+        <template v-if="form.ttsEnabled">
+          <div class="field-row">
+            <div class="field-label">语音角色</div>
+            <div class="field-control">
+              <select v-model="form.ttsVoice" class="select-input">
+                <option v-for="v in edgeVoices" :key="v.voice" :value="v.voice">
+                  {{ v.name }} — {{ v.desc }}
+                </option>
+              </select>
             </div>
           </div>
-        </div>
 
-        <div class="field-row" v-if="form.ttsEnabled && availableVoices.length">
-          <div class="field-label">语音</div>
-          <div class="field-control">
-            <select v-model="form.ttsVoiceUri" class="select-input">
-              <option value="">系统默认</option>
-              <option v-for="v in availableVoices" :key="v.voiceURI" :value="v.voiceURI">
-                {{ v.name }}
-              </option>
-            </select>
-            <div class="field-hint">建议选择名字里带「Chinese」「中文」或「Ting-Ting」的语音</div>
+          <div class="field-row">
+            <div class="field-label">情感风格</div>
+            <div class="field-control">
+              <select v-model="form.ttsStyle" class="select-input">
+                <option v-for="s in edgeStyles" :key="s.id" :value="s.id">
+                  {{ s.name }}
+                </option>
+              </select>
+            </div>
           </div>
-        </div>
 
-        <div class="field-row" v-if="form.ttsEnabled">
-          <div class="field-label"></div>
-          <div class="field-control">
-            <button class="btn" @click="testTTS">试听</button>
+          <div class="field-row">
+            <div class="field-label">语速</div>
+            <div class="field-control">
+              <select v-model="form.ttsRate" class="select-input">
+                <option value="-50%">慢</option>
+                <option value="-20%">稍慢</option>
+                <option value="+0%">正常</option>
+                <option value="+20%">稍快</option>
+                <option value="+50%">快</option>
+              </select>
+            </div>
           </div>
-        </div>
+
+          <div class="field-row">
+            <div class="field-label"></div>
+            <div class="field-control">
+              <button class="btn" @click="testTTS">试听</button>
+            </div>
+          </div>
+        </template>
       </div>
 
       <div class="card settings-card">
@@ -262,6 +281,10 @@ const form = reactive({
   vrmPreset: 'avatar_b',   // official | vroid_base | avatar_b | glb_custom | custom
   scenePreset: 'auto',     // auto | dark | light
   ttsEnabled: true,
+  ttsVoice: 'zh-CN-XiaoxiaoNeural',
+  ttsRate: '+0%',
+  ttsPitch: '+0Hz',
+  ttsStyle: 'default',
   ttsVoiceUri: '',
   vrmUrl: '',
 })
@@ -458,45 +481,50 @@ function saveVrmSettings() {
   setTimeout(() => { vrmSaveStatus.value = '' }, 3000)
 }
 
-const availableVoices = ref([])
-const ttsStatus = computed(() => {
-  if (!window.speechSynthesis) return { ok: false, text: '当前浏览器不支持语音合成' }
-  if (!availableVoices.value.length) return { ok: false, text: '语音列表加载中…（如果一直无语音，可能是系统未安装中文语音包）' }
-  return { ok: true, text: `已加载 ${availableVoices.value.length} 条语音` }
-})
+const edgeVoices = [
+  { voice: 'zh-CN-XiaoxiaoNeural', name: '晓晓', desc: '温柔女性（推荐）' },
+  { voice: 'zh-CN-XiaoyiNeural', name: '晓伊', desc: '活泼女性' },
+  { voice: 'zh-CN-YunjianNeural', name: '云健', desc: '成熟男性' },
+  { voice: 'zh-CN-YunxiNeural', name: '云希', desc: '年轻男性' },
+  { voice: 'zh-CN-YunxiaNeural', name: '云夏', desc: '少年男性' },
+  { voice: 'zh-CN-liaoning-XiaobeiNeural', name: '晓北', desc: '东北话' },
+  { voice: 'zh-CN-shaanxi-XiaoniNeural', name: '晓妮', desc: '陕西话' },
+]
 
-function loadVoices() {
-  if (!window.speechSynthesis) return
-  const voices = window.speechSynthesis.getVoices()
-  // 优先中文语音，再按本地/非本地排序
-  const zhVoices = voices.filter(v => v.lang && (v.lang.startsWith('zh') || v.lang.startsWith('cmn')))
-  availableVoices.value = zhVoices.length ? zhVoices : voices
-}
+const edgeStyles = [
+  { id: 'default', name: '默认' },
+  { id: 'assistant', name: '助理' },
+  { id: 'chat', name: '闲聊' },
+  { id: 'cheerful', name: '开心' },
+  { id: 'sad', name: '悲伤' },
+  { id: 'angry', name: '生气' },
+]
 
-let settingsTtsUnlocked = false
-
-function unlockSettingsTTS() {
-  if (settingsTtsUnlocked || !window.speechSynthesis) return
-  settingsTtsUnlocked = true
-  const u = new SpeechSynthesisUtterance(' ')
-  u.volume = 0.001
-  u.rate = 10
-  window.speechSynthesis.speak(u)
-}
-
-function testTTS() {
-  if (!window.speechSynthesis) return
-  unlockSettingsTTS()
-  window.speechSynthesis.cancel()
-  const u = new SpeechSynthesisUtterance('你好，我是助理小姐')
-  u.lang = 'zh-CN'
-  u.rate = 1.05
-  u.volume = 1.0
-  if (form.ttsVoiceUri) {
-    const voice = availableVoices.value.find(v => v.voiceURI === form.ttsVoiceUri)
-    if (voice) u.voice = voice
+async function testTTS() {
+  try {
+    const res = await fetch('/api/tts/speech', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        text: '你好，我是助理小姐',
+        voice: form.ttsVoice,
+        rate: form.ttsRate,
+        pitch: form.ttsPitch,
+        style: form.ttsStyle,
+      }),
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const blob = await res.blob()
+    const audio = new Audio(URL.createObjectURL(blob))
+    await audio.play()
+  } catch (e) {
+    // fallback: 浏览器原生 TTS
+    if (window.speechSynthesis) {
+      const u = new SpeechSynthesisUtterance('你好，我是助理小姐')
+      u.lang = 'zh-CN'
+      window.speechSynthesis.speak(u)
+    }
   }
-  window.speechSynthesis.speak(u)
 }
 
 function saveSettings() {
@@ -510,6 +538,10 @@ function saveSettings() {
     model:        form.model,
     systemPrompt: form.systemPrompt,
     ttsEnabled:   form.ttsEnabled,
+    ttsVoice:     form.ttsVoice,
+    ttsRate:      form.ttsRate,
+    ttsPitch:     form.ttsPitch,
+    ttsStyle:     form.ttsStyle,
     ttsVoiceUri:  form.ttsVoiceUri,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
@@ -525,10 +557,7 @@ onMounted(() => {
       Object.assign(form, data)
     } catch {}
   }
-  loadVoices()
-  if (window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) {
-    window.speechSynthesis.onvoiceschanged = loadVoices
-  }
+  // Edge TTS 语音列表由后端提供，无需浏览器加载
 })
 </script>
 

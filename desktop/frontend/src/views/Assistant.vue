@@ -402,29 +402,72 @@ function loadSettings() {
 }
 
 // ── TTS ───────────────────────────────────────────────────
+let currentAudio = null
+
 function stopSpeaking() {
+  if (currentAudio) {
+    currentAudio.pause()
+    currentAudio.currentTime = 0
+    currentAudio = null
+  }
+  // fallback: 同时取消浏览器原生 TTS
   if (window.speechSynthesis) window.speechSynthesis.cancel()
 }
 
-let ttsUnlocked = false
-
-function unlockTTS() {
-  if (ttsUnlocked || !window.speechSynthesis) return
-  ttsUnlocked = true
-  // 用极短空格在用户手势上下文中激活语音引擎，不用 cancel()
-  const u = new SpeechSynthesisUtterance(' ')
-  u.volume = 0.001
-  u.rate = 10
-  window.speechSynthesis.speak(u)
-}
-
-function speak(text) {
-  if (!text || !window.speechSynthesis) return
+async function speak(text) {
+  if (!text) return
   const settings = loadSettings()
   if (!settings.ttsEnabled) return
 
   console.log('[TTS] speak:', text.slice(0, 30) + (text.length > 30 ? '...' : ''))
   stopSpeaking()
+
+  // 优先使用后端 Edge TTS
+  try {
+    const res = await fetch('/api/tts/speech', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        voice: settings.ttsVoice || 'zh-CN-XiaoxiaoNeural',
+        rate: settings.ttsRate || '+0%',
+        pitch: settings.ttsPitch || '+0Hz',
+        style: settings.ttsStyle || 'default',
+      }),
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    currentAudio = new Audio(url)
+
+    currentAudio.onplay = () => { charState.value = 'talking' }
+    currentAudio.onended = () => {
+      charState.value = 'idle'
+      URL.revokeObjectURL(url)
+      currentAudio = null
+    }
+    currentAudio.onerror = () => {
+      charState.value = 'idle'
+      URL.revokeObjectURL(url)
+      currentAudio = null
+      speakNative(text)
+    }
+
+    await currentAudio.play()
+    return
+  } catch (e) {
+    console.warn('[TTS] Edge TTS failed, falling back to native:', e)
+  }
+
+  // fallback: 浏览器原生 TTS
+  speakNative(text)
+}
+
+function speakNative(text) {
+  if (!text || !window.speechSynthesis) return
+  const settings = loadSettings()
+  if (!settings.ttsEnabled) return
 
   const utterance = new SpeechSynthesisUtterance(text)
   utterance.lang = 'zh-CN'
@@ -432,7 +475,6 @@ function speak(text) {
   utterance.pitch = 1.0
   utterance.volume = 1.0
 
-  // 如果用户选择了特定语音，尝试匹配
   if (settings.ttsVoiceUri) {
     const voices = window.speechSynthesis.getVoices()
     const voice = voices.find(v => v.voiceURI === settings.ttsVoiceUri)
@@ -441,14 +483,7 @@ function speak(text) {
 
   utterance.onstart = () => { charState.value = 'talking' }
   utterance.onend = () => { charState.value = 'idle' }
-  utterance.onerror = (e) => {
-    charState.value = 'idle'
-    console.warn('[TTS error]', e.error, e)
-    if (e.error === 'not-allowed') {
-      pushAssistant('🔇 语音播放被浏览器阻止，请点击页面任意位置后再试~')
-      ttsUnlocked = false
-    }
-  }
+  utterance.onerror = () => { charState.value = 'idle' }
 
   window.speechSynthesis.speak(utterance)
 }
@@ -508,7 +543,6 @@ async function sendMessage() {
   }
 
   stopSpeaking()
-  unlockTTS()
   displayMessages.value.push({ id: ++msgId, role: 'user', content: text, time: getTime() })
   apiMessages.push({ role: 'user', content: text })
   inputText.value = ''
@@ -1260,7 +1294,6 @@ function animate() {
 
 // ── 生命周期 ──────────────────────────────────────────────
 function onFirstInteraction() {
-  unlockTTS()
   document.removeEventListener('click', onFirstInteraction)
 }
 

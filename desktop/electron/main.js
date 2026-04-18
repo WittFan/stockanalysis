@@ -19,15 +19,14 @@ const http  = require('http')
 // 尽早设置应用名称，确保 macOS 菜单栏左上角显示正确名称
 app.setName('大道量化')
 
-// 启用 Chromium 的 Web Speech API（TTS）
-app.commandLine.appendSwitch('enable-speech-dispatcher')
-app.commandLine.appendSwitch('enable-features', 'WebSpeechAPI')
-app.commandLine.appendSwitch('enable-speech-api')
-
-// macOS 额外：确保辅助功能/TTS 权限可以被请求
-if (process.platform === 'darwin') {
-  app.commandLine.appendSwitch('disable-features', 'MuteTTS')
-}
+// TTS 已由后端 Edge TTS 代理，不再依赖 Chromium Web Speech API
+// 保留注释以便将来需要时恢复：
+// app.commandLine.appendSwitch('enable-speech-dispatcher')
+// app.commandLine.appendSwitch('enable-features', 'WebSpeechAPI')
+// app.commandLine.appendSwitch('enable-speech-api')
+// if (process.platform === 'darwin') {
+//   app.commandLine.appendSwitch('disable-features', 'MuteTTS')
+// }
 
 // ── 配置 ──────────────────────────────────────────────────────────────────────
 const BACKEND_PORT   = 8888

@@ -54,6 +54,7 @@ def create_app(xlsx_path: str = None, root_path: Path = None) -> Flask:
     from api.routes.health import bp as health_bp
     from api.routes.download import make_download_bp
     from api.routes.assistant import bp as assistant_bp
+    from api.routes.tts import bp as tts_bp
 
     app.register_blueprint(make_chart_bp(chart_handler),       url_prefix='/api')
     app.register_blueprint(make_backtest_bp(backtest_handler),  url_prefix='/api')
@@ -61,6 +62,7 @@ def create_app(xlsx_path: str = None, root_path: Path = None) -> Flask:
     app.register_blueprint(health_bp,                           url_prefix='/api')
     app.register_blueprint(make_download_bp(download_handler),  url_prefix='/api')
     app.register_blueprint(assistant_bp,                        url_prefix='/api')
+    app.register_blueprint(tts_bp,                              url_prefix='/api')
 
     # ── 模型文件（Electron 回落到 Flask 时直接提供 VRM/GLB）────────────────
     public_models = Path(__file__).parent.parent / 'desktop' / 'frontend' / 'public' / 'models'
