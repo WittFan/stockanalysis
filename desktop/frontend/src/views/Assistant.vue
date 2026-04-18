@@ -403,6 +403,42 @@ function loadSettings() {
 
 // ── TTS ───────────────────────────────────────────────────
 let currentAudio = null
+let audioContext = null
+let audioAnalyser = null
+
+function getAudioContext() {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)()
+  }
+  return audioContext
+}
+
+function connectAudioAnalyser(audio) {
+  const ctx = getAudioContext()
+  if (audioAnalyser) {
+    // 如果已有 analyser，先断开旧的连接（简化处理：直接重建）
+    try { audioAnalyser.disconnect() } catch {}
+  }
+  audioAnalyser = ctx.createAnalyser()
+  audioAnalyser.fftSize = 256
+  audioAnalyser.smoothingTimeConstant = 0.65
+  try {
+    const source = ctx.createMediaElementSource(audio)
+    source.connect(audioAnalyser)
+    audioAnalyser.connect(ctx.destination)
+  } catch (e) {
+    // 同一 Audio 元素只能连接一次，忽略重复连接错误
+  }
+}
+
+function getAudioVolume() {
+  if (!audioAnalyser) return 0
+  const data = new Uint8Array(audioAnalyser.frequencyBinCount)
+  audioAnalyser.getByteFrequencyData(data)
+  let sum = 0
+  for (let i = 0; i < data.length; i++) sum += data[i]
+  return sum / data.length / 255  // 0 ~ 1
+}
 
 function stopSpeaking() {
   if (currentAudio) {
@@ -414,11 +450,12 @@ function stopSpeaking() {
   if (window.speechSynthesis) window.speechSynthesis.cancel()
 }
 
-async function speak(text) {
-  if (!text) return
+async function speak(rawText) {
+  if (!rawText) return
   const settings = loadSettings()
   if (!settings.ttsEnabled) return
 
+  const text = stripMarkdown(rawText)
   console.log('[TTS] speak:', text.slice(0, 30) + (text.length > 30 ? '...' : ''))
   stopSpeaking()
 
@@ -440,6 +477,7 @@ async function speak(text) {
     const blob = await res.blob()
     const url = URL.createObjectURL(blob)
     currentAudio = new Audio(url)
+    connectAudioAnalyser(currentAudio)
 
     currentAudio.onplay = () => { charState.value = 'talking' }
     currentAudio.onended = () => {
@@ -508,6 +546,22 @@ function md(text) {
   s = s.replace(/^[-*] (.+)$/gm, '<li>$1</li>')
   s = s.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>')
   return s
+}
+
+function stripMarkdown(text) {
+  if (!text) return ''
+  return text
+    .replace(/```[\s\S]*?```/g, '（代码省略）')
+    .replace(/`([^`\n]+)`/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^\s*[-*]\s+/gm, '')
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\n+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function fmtJson(obj) {
@@ -1149,10 +1203,13 @@ function updateLipSync(t) {
   const state = charState.value
 
   if (state === 'talking') {
-    // 多音素混合，看起来更自然
-    const aa = Math.max(0, Math.sin(t * 13)   * 0.55 + 0.15)
-    const ih = Math.max(0, Math.sin(t * 10.5) * 0.3)
-    const ou = Math.max(0, Math.sin(t * 8)    * 0.2)
+    // 基于真实音频音量驱动口型（替代原来的正弦波模拟）
+    const volume = getAudioVolume()
+    // 添加轻微随机抖动，让口型更自然
+    const jitter = Math.sin(t * 23) * 0.04
+    const aa = Math.max(0, Math.min(1, volume * 1.3 + jitter - 0.05))
+    const ih = Math.max(0, Math.min(1, volume * 0.7 + jitter * 0.5 - 0.02))
+    const ou = Math.max(0, Math.min(1, volume * 0.4 + Math.sin(t * 17) * 0.08))
     mgr.setValue(VRMExpressionPresetName.Aa, aa)
     mgr.setValue(VRMExpressionPresetName.Ih, ih)
     mgr.setValue(VRMExpressionPresetName.Ou, ou)
