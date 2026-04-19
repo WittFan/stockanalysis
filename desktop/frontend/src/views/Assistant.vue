@@ -40,37 +40,41 @@
       </div>
     </div>
 
-    <!-- ── 右：Agent 对话 ──────────────────────────────── -->
+    <!-- ── 右：Agent 对话（Claude Code 风格）──────────── -->
     <div class="agent-panel">
 
-      <!-- 顶部信息栏 -->
+      <!-- 顶部栏 -->
       <div class="agent-header">
         <div class="header-left">
-          <span class="agent-title">助理智能体</span>
-          <div class="tool-chips">
-            <span v-for="t in toolDefs" :key="t.name" class="tool-chip" :title="t.desc">
-              <span class="tc-icon">{{ t.icon }}</span>{{ t.label }}
-            </span>
-          </div>
+          <span class="agent-title">Agent</span>
+          <span class="session-badge" v-if="currentSessionId">
+            <span class="session-dot" />
+            <span class="session-id">{{ currentSessionId.slice(0, 8) }}</span>
+          </span>
         </div>
         <div class="header-right">
           <span class="model-tag" v-if="currentModel">{{ currentModel }}</span>
-          <button class="icon-btn" @click="clearHistory" title="清空对话">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-              <path d="M10 11v6M14 11v6"/>
+          <button class="hdr-btn" @click="clearHistory" title="新建会话">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
+            新建
           </button>
         </div>
       </div>
 
-      <!-- 消息区 -->
-      <div class="messages-area" ref="messagesRef">
+      <!-- Feed 区域 -->
+      <div class="feed" ref="messagesRef">
 
+        <!-- 空状态 -->
         <div v-if="!displayMessages.length" class="empty-state">
-          <div class="empty-icon">✨</div>
-          <div class="empty-title">我是你的量化投研智能体</div>
-          <div class="empty-sub">可以帮你分析股票、计算数据、查询行情</div>
+          <div class="empty-logo">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+            </svg>
+          </div>
+          <div class="empty-title">量化投研智能体</div>
+          <div class="empty-sub">分析股票 · 查询行情 · 回测策略</div>
           <div class="suggestions">
             <button v-for="s in suggestions" :key="s" class="suggest-btn" @click="fillSuggest(s)">
               {{ s }}
@@ -80,81 +84,98 @@
 
         <template v-for="msg in displayMessages" :key="msg.id">
 
-          <!-- 用户 -->
-          <div v-if="msg.role === 'user'" class="msg msg-user">
-            <div class="user-bubble" v-html="md(msg.content)" />
-            <span class="msg-time">{{ msg.time }}</span>
+          <!-- ── 用户输入行 ── -->
+          <div v-if="msg.role === 'user'" class="feed-row feed-user">
+            <span class="feed-prompt">&gt;</span>
+            <div class="feed-user-text" v-html="md(msg.content)" />
           </div>
 
-          <!-- 助理 -->
-          <div v-else-if="msg.role === 'assistant'" class="msg msg-assistant">
-            <div class="avatar">🌸</div>
-            <div class="msg-body">
+          <!-- ── 助理输出块 ── -->
+          <div v-else-if="msg.role === 'assistant'" class="feed-row feed-assistant">
 
-              <!-- 工具调用块 -->
-              <div v-for="tc in msg.toolCalls" :key="tc.id"
-                   class="tc-block" :class="['tc-' + tc.status]">
-                <div class="tc-head" @click="tc.open = !tc.open">
-                  <span class="tc-icon-wrap">{{ toolIcon(tc.name) }}</span>
-                  <span class="tc-name">{{ tc.name }}</span>
-                  <span class="tc-badge" :class="tc.status">
-                    {{ tc.status === 'running' ? '执行中' : tc.status === 'done' ? '完成' : '失败' }}
-                  </span>
-                  <span class="tc-chevron">{{ tc.open ? '▾' : '▸' }}</span>
-                </div>
-                <Transition name="slide">
-                  <div v-show="tc.open" class="tc-body">
-                    <div class="tc-section">
-                      <div class="tc-section-label">参数</div>
-                      <pre class="tc-code">{{ fmtJson(tc.arguments) }}</pre>
-                    </div>
-                    <div v-if="tc.result !== undefined" class="tc-section">
-                      <div class="tc-section-label">结果</div>
-                      <div class="tc-result" v-html="md(String(tc.result))" />
-                    </div>
+            <!-- 工具调用卡片 -->
+            <div
+              v-for="(tc, i) in msg.toolCalls" :key="tc.id"
+              class="tool-card" :class="'tool-' + tc.status"
+            >
+              <!-- 卡片头 -->
+              <div class="tool-card-head" @click="tc.open = !tc.open">
+                <span class="tool-step">{{ i + 1 }}</span>
+                <span class="tool-icon">{{ toolIcon(tc.name) }}</span>
+                <span class="tool-name">{{ tc.name }}</span>
+                <span class="tool-status-dot" :class="tc.status" />
+                <span class="tool-status-label" :class="tc.status">
+                  {{ tc.status === 'running' ? '运行中' : tc.status === 'done' ? '完成' : '失败' }}
+                </span>
+                <span class="tool-chevron" :class="{ open: tc.open }">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </span>
+              </div>
+
+              <!-- 卡片内容（可折叠）-->
+              <Transition name="fold">
+                <div v-show="tc.open" class="tool-card-body">
+                  <!-- 参数 -->
+                  <div class="tool-section">
+                    <span class="tool-section-label">INPUT</span>
+                    <pre class="tool-code">{{ fmtJson(tc.arguments) }}</pre>
                   </div>
-                </Transition>
-              </div>
-
-              <!-- 文本内容 -->
-              <div v-if="msg.content || msg.streaming" class="assistant-bubble">
-                <span v-html="md(msg.content)" />
-                <span v-if="msg.streaming" class="cursor" />
-              </div>
-
-              <span v-if="!msg.streaming" class="msg-time">{{ msg.time }}</span>
+                  <!-- 结果 -->
+                  <div v-if="tc.result !== undefined" class="tool-section">
+                    <span class="tool-section-label">OUTPUT</span>
+                    <div class="tool-output" v-html="md(String(tc.result))" />
+                  </div>
+                </div>
+              </Transition>
             </div>
+
+            <!-- 文字回复 -->
+            <div v-if="msg.content || msg.streaming" class="feed-text">
+              <span v-html="md(msg.content)" />
+              <span v-if="msg.streaming" class="cursor" />
+            </div>
+
+            <span v-if="!msg.streaming && msg.content" class="feed-time">{{ msg.time }}</span>
           </div>
         </template>
 
-        <!-- 思考指示 -->
-        <div v-if="isThinking && !isStreaming" class="msg msg-assistant thinking-row">
-          <div class="avatar">🌸</div>
-          <div class="msg-body">
-            <div class="thinking-dots"><span/><span/><span/></div>
+        <!-- 思考动效 -->
+        <div v-if="isThinking && !isStreaming" class="feed-row feed-assistant">
+          <div class="thinking">
+            <span class="thinking-label">思考中</span>
+            <span class="thinking-dots"><i/><i/><i/></span>
           </div>
         </div>
+
       </div>
 
       <!-- 输入区 -->
-      <div class="input-area">
-        <textarea
-          ref="inputRef"
-          v-model="inputText"
-          class="agent-input"
-          :disabled="isLoading"
-          placeholder="给助理小姐发消息... (Enter 发送，Shift+Enter 换行)"
-          @keydown.enter.exact.prevent="sendMessage"
-          @input="autoResize"
-          rows="1"
-        />
-        <button class="send-btn" :class="{ active: inputText.trim() }"
-                :disabled="isLoading || !inputText.trim()" @click="sendMessage">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <polygon points="22 2 15 22 11 13 2 9 22 2" fill="currentColor"/>
-          </svg>
-        </button>
+      <div class="input-bar">
+        <div class="input-wrap" :class="{ focused: inputText.trim() }">
+          <span class="input-prompt">&gt;</span>
+          <textarea
+            ref="inputRef"
+            v-model="inputText"
+            class="agent-input"
+            :disabled="isLoading"
+            placeholder="输入指令... (Enter 发送，Shift+Enter 换行)"
+            @keydown.enter.exact.prevent="sendMessage"
+            @input="autoResize"
+            rows="1"
+          />
+          <button class="send-btn" :disabled="isLoading || !inputText.trim()" @click="sendMessage">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="input-footer">
+          <span class="input-hint">Enter 发送 · Shift+Enter 换行</span>
+          <span class="input-tools">
+            <span v-for="t in toolDefs.slice(0,3)" :key="t.name" class="input-tool-chip">{{ t.icon }} {{ t.label }}</span>
+            <span class="input-tool-chip">🗄️ 金融数据</span>
+          </span>
+        </div>
       </div>
 
     </div>
@@ -166,42 +187,16 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { VRMLoaderPlugin, VRMUtils, VRMExpressionPresetName, VRMHumanBoneName } from '@pixiv/three-vrm'
-
-const STORAGE_KEY = 'assistant_settings'
-
-// 模型预设映射
-const VRM_PRESET_URLS = {
-  official:    'https://cdn.jsdelivr.net/gh/pixiv/three-vrm@3.5.1/packages/three-vrm/examples/models/VRM1_Constraint_Twist_Sample.vrm',
-  vroid_base:  window.electronAPI?.isElectron ? './models/vroid_female.vrm'      : '/models/vroid_female.vrm',
-  avatar_b:    window.electronAPI?.isElectron ? './models/AvatarSample_B.vrm'    : '/models/AvatarSample_B.vrm',
-  glb_custom:  window.electronAPI?.isElectron ? './models/textured_mesh.glb'     : '/models/textured_mesh.glb',
-}
-
-function getDefaultVrmUrl() {
-  const preset = getVrmPreset()   // 统一走 vrmPresetUserSet 判断
-  if (preset === 'custom') return loadSettings().vrmUrl || ''
-  return VRM_PRESET_URLS[preset] || VRM_PRESET_URLS.avatar_b
-}
-
-function getVrmPreset() {
-  const s = loadSettings()
-  // 只有用户在设置页主动保存过 VRM 配置才信任存储值，否则使用新默认
-  return (s.vrmPresetUserSet && s.vrmPreset) ? s.vrmPreset : 'avatar_b'
-}
-
-// 判断是否为纯 GLB（非 VRM）
-function isGLBModel(url) {
-  return url?.toLowerCase().endsWith('.glb') && getVrmPreset() === 'glb_custom'
-}
-
-function getScenePreset() {
-  const settings = loadSettings()
-  const scene = settings.scenePreset || 'auto'
-  if (scene !== 'auto') return scene
-  // auto 映射：通过 getVrmPreset() 拿到真实生效的预设
-  const vrm = getVrmPreset()
-  return (vrm === 'vroid_base' || vrm === 'glb_custom' || vrm === 'avatar_b') ? 'light' : 'dark'
-}
+import {
+  loadSettings,
+  getDefaultVrmUrl,
+  getVrmPreset,
+  isGLBModel,
+  getScenePreset,
+} from '@/composables/useSettings.js'
+import { useTTS } from '@/composables/useTTS.js'
+import { useChat, fmtJson } from '@/composables/useChat.js'
+import { md } from '@/utils/markdown.js'
 
 // 场景配置表
 const SCENE_CONFIGS = {
@@ -312,14 +307,7 @@ const containerRef    = ref(null)
 const canvasRef       = ref(null)
 const messagesRef     = ref(null)
 const inputRef        = ref(null)
-const inputText       = ref('')
-const isLoading       = ref(false)
-const isThinking      = ref(false)
-const isStreaming     = ref(false)
 const charState       = ref('idle')   // idle | thinking | talking
-const displayMessages = ref([])
-let apiMessages = []
-let msgId = 0
 
 const statusText = computed(() => {
   if (charState.value === 'thinking') return '思考中...'
@@ -327,469 +315,27 @@ const statusText = computed(() => {
   return '在线'
 })
 
-const hasSettings  = computed(() => {
-  const s = loadSettings()
-  return s.provider === 'local_kimi' || !!s.apiKey
-})
-const currentModel = computed(() => {
-  const s = loadSettings()
-  return s.provider === 'local_kimi' ? 'Kimi CLI' : (s.model || '')
-})
-
 const suggestions = ['帮我分析一下贵州茅台', '市盈率多少算合理？', '计算一下 sqrt(1024) + 3^4', '现在几点了？']
 
-// ── 工具定义 ──────────────────────────────────────────────
-const toolDefs = [
-  {
-    name: 'get_current_time',
-    icon: '🕐', label: '时间', desc: '获取当前日期时间',
-    parameters: { type: 'object', properties: {}, required: [] },
-    execute: () => new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }),
-  },
-  {
-    name: 'calculate',
-    icon: '🧮', label: '计算', desc: '计算数学表达式',
-    parameters: {
-      type: 'object',
-      properties: { expression: { type: 'string', description: '数学表达式，支持 JS 语法' } },
-      required: ['expression'],
-    },
-    execute: ({ expression }) => {
-      try {
-        // eslint-disable-next-line no-new-func
-        const result = Function('"use strict"; return (' + expression + ')')()
-        return `${expression} = ${result}`
-      } catch (e) {
-        return `计算出错: ${e.message}`
-      }
-    },
-  },
-  {
-    name: 'get_stock_info',
-    icon: '📈', label: '行情', desc: '查询A股股票行情',
-    parameters: {
-      type: 'object',
-      properties: { symbol: { type: 'string', description: '股票代码，如 000001.SZ 或 600519.SH' } },
-      required: ['symbol'],
-    },
-    execute: async ({ symbol }) => {
-      try {
-        const res = await fetch(`/api/chart/ohlcv?ts_code=${encodeURIComponent(symbol)}&limit=5`)
-        if (!res.ok) return `获取 ${symbol} 失败 (${res.status})`
-        const data = await res.json()
-        if (data.error) return `错误: ${data.error}`
-        const rows = data.data?.slice(-3) || []
-        if (!rows.length) return `未找到 ${symbol} 数据`
-        return rows.map(r => `日期: ${r[0]}  开: ${r[1]}  高: ${r[2]}  低: ${r[3]}  收: ${r[4]}  量: ${r[5]}`).join('\n')
-      } catch (e) {
-        return `网络错误: ${e.message}`
-      }
-    },
-  },
-]
-
-const TOOL_ICONS = Object.fromEntries(toolDefs.map(t => [t.name, t.icon]))
-const toolIcon = name => TOOL_ICONS[name] || '🔧'
-
-const TOOLS_SCHEMA = toolDefs.map(t => ({
-  type: 'function',
-  function: { name: t.name, description: t.desc, parameters: t.parameters },
-}))
-
-// ── 设置 ──────────────────────────────────────────────────
-function loadSettings() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') } catch { return {} }
-}
-
 // ── TTS ───────────────────────────────────────────────────
-let currentAudio = null
-let audioContext = null
-let audioAnalyser = null
+const { speak, stopSpeaking, getAudioVolume } = useTTS({
+  onStateChange: (state) => { charState.value = state },
+})
 
-function getAudioContext() {
-  if (!audioContext) {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)()
-  }
-  return audioContext
-}
-
-function connectAudioAnalyser(audio) {
-  const ctx = getAudioContext()
-  // 首次在用户手势上下文中恢复 AudioContext，否则 AnalyserNode 无输出
-  if (ctx.state === 'suspended') {
-    ctx.resume().catch(() => {})
-  }
-  if (audioAnalyser) {
-    try { audioAnalyser.disconnect() } catch {}
-  }
-  audioAnalyser = ctx.createAnalyser()
-  audioAnalyser.fftSize = 256
-  audioAnalyser.smoothingTimeConstant = 0.65
-  try {
-    const source = ctx.createMediaElementSource(audio)
-    source.connect(audioAnalyser)
-    audioAnalyser.connect(ctx.destination)
-  } catch (e) {
-    // 同一 Audio 元素只能连接一次，忽略重复连接错误
-  }
-}
-
-function getAudioVolume() {
-  if (!audioAnalyser) return 0
-  const data = new Uint8Array(audioAnalyser.frequencyBinCount)
-  audioAnalyser.getByteFrequencyData(data)
-  let sum = 0
-  for (let i = 0; i < data.length; i++) sum += data[i]
-  return sum / data.length / 255  // 0 ~ 1
-}
-
-function stopSpeaking() {
-  if (currentAudio) {
-    currentAudio.pause()
-    currentAudio.currentTime = 0
-    currentAudio = null
-  }
-  charState.value = 'idle'
-  // fallback: 同时取消浏览器原生 TTS
-  if (window.speechSynthesis) window.speechSynthesis.cancel()
-}
-
-async function speak(rawText) {
-  if (!rawText) return
-  const settings = loadSettings()
-  if (!settings.ttsEnabled) return
-
-  const text = stripMarkdown(rawText)
-  console.log('[TTS] speak:', text.slice(0, 30) + (text.length > 30 ? '...' : ''))
-  stopSpeaking()
-
-  // 优先使用后端 Edge TTS
-  try {
-    const res = await fetch('/api/tts/speech', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        text,
-        voice: settings.ttsVoice || 'zh-CN-XiaoxiaoNeural',
-        rate: settings.ttsRate || '+0%',
-        pitch: settings.ttsPitch || '+0Hz',
-      }),
-    })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-    const blob = await res.blob()
-    const url = URL.createObjectURL(blob)
-    currentAudio = new Audio(url)
-    connectAudioAnalyser(currentAudio)
-
-    currentAudio.onplay = () => { charState.value = 'talking' }
-    currentAudio.onended = () => {
-      charState.value = 'idle'
-      URL.revokeObjectURL(url)
-      currentAudio = null
-    }
-    currentAudio.onerror = () => {
-      charState.value = 'idle'
-      URL.revokeObjectURL(url)
-      currentAudio = null
-      speakNative(text)
-    }
-
-    await currentAudio.play()
-    return
-  } catch (e) {
-    console.warn('[TTS] Edge TTS failed, falling back to native:', e)
-  }
-
-  // fallback: 浏览器原生 TTS
-  speakNative(text)
-}
-
-function speakNative(text) {
-  if (!text || !window.speechSynthesis) return
-  const settings = loadSettings()
-  if (!settings.ttsEnabled) return
-
-  const utterance = new SpeechSynthesisUtterance(text)
-  utterance.lang = 'zh-CN'
-  utterance.rate = 1.05
-  utterance.pitch = 1.0
-  utterance.volume = 1.0
-
-  if (settings.ttsVoiceUri) {
-    const voices = window.speechSynthesis.getVoices()
-    const voice = voices.find(v => v.voiceURI === settings.ttsVoiceUri)
-    if (voice) utterance.voice = voice
-  }
-
-  utterance.onstart = () => { charState.value = 'talking' }
-  utterance.onend = () => { charState.value = 'idle' }
-  utterance.onerror = () => { charState.value = 'idle' }
-
-  window.speechSynthesis.speak(utterance)
-}
-
-// ── 工具函数 ──────────────────────────────────────────────
-function getTime() {
-  const n = new Date()
-  return `${n.getHours().toString().padStart(2,'0')}:${n.getMinutes().toString().padStart(2,'0')}`
-}
-
-function md(text) {
-  if (!text) return ''
-  let s = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-  s = s.replace(/```(\w*)\n?([\s\S]*?)```/g, (_,lang,code) =>
-    `<pre class="md-pre"><code class="md-code">${code.trim()}</code></pre>`)
-  s = s.replace(/`([^`\n]+)`/g, '<code class="md-inline">$1</code>')
-  s = s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-  s = s.replace(/\*(.*?)\*/g, '<em>$1</em>')
-  s = s.replace(/^### (.+)$/gm, '<h3 class="md-h">$1</h3>')
-  s = s.replace(/^## (.+)$/gm,  '<h2 class="md-h">$1</h2>')
-  s = s.replace(/^# (.+)$/gm,   '<h1 class="md-h">$1</h1>')
-  s = s.replace(/^[-*] (.+)$/gm, '<li>$1</li>')
-  s = s.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>')
-  return s
-}
-
-function stripMarkdown(text) {
-  if (!text) return ''
-  return text
-    // 代码块
-    .replace(/```[\s\S]*?```/g, '（代码省略）')
-    // 行内代码
-    .replace(/`([^`\n]+)`/g, '$1')
-    // 粗体
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    // 斜体
-    .replace(/\*([^*]+)\*/g, '$1')
-    // 删除线
-    .replace(/~~([^~]+)~~/g, '$1')
-    // 标题
-    .replace(/^#{1,6}\s+/gm, '')
-    // 无序列表
-    .replace(/^\s*[-*]\s+/gm, '')
-    // 有序列表
-    .replace(/^\s*\d+\.\s+/gm, '')
-    // 图片
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
-    // 链接
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    // 引用
-    .replace(/^>\s+/gm, '')
-    // 水平线
-    .replace(/^---+$/gm, '')
-    // LaTeX 行内公式
-    .replace(/\$([^$\n]+)\$/g, '$1')
-    // LaTeX 块级公式
-    .replace(/\$\$[\s\S]*?\$\$/g, '（公式省略）')
-    // 裸 URL
-    .replace(/https?:\/\/\S+/g, '（链接）')
-    // Emoji 和扩展象形符号（⭐✨ 等会被 TTS 读出来）
-    .replace(/\p{Extended_Pictographic}/gu, '')
-    // 多余空白
-    .replace(/\n+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-function fmtJson(obj) {
-  try { return JSON.stringify(typeof obj === 'string' ? JSON.parse(obj) : obj, null, 2) }
-  catch { return String(obj) }
-}
-
-function fillSuggest(s) { inputText.value = s }
-
-async function scrollToBottom() {
-  await nextTick()
-  if (messagesRef.value) messagesRef.value.scrollTop = messagesRef.value.scrollHeight
-}
-
-function autoResize(e) {
-  const el = e.target
-  el.style.height = 'auto'
-  el.style.height = Math.min(el.scrollHeight, 120) + 'px'
-}
-
-function clearHistory() {
-  displayMessages.value = []
-  apiMessages = []
-}
-
-// ── Agent 主逻辑 ──────────────────────────────────────────
-async function sendMessage() {
-  const text = inputText.value.trim()
-  if (!text || isLoading.value) return
-  if (!hasSettings.value) {
-    pushAssistant('请先在「设置」中配置 API Key 哦~ 🌸')
-    return
-  }
-
-  stopSpeaking()
-  displayMessages.value.push({ id: ++msgId, role: 'user', content: text, time: getTime() })
-  apiMessages.push({ role: 'user', content: text })
-  inputText.value = ''
-  if (inputRef.value) inputRef.value.style.height = 'auto'
-  isLoading.value = true
-  charState.value = 'thinking'
-  scrollToBottom()
-
-  try {
-    await agentLoop(5)
-  } catch (e) {
-    pushAssistant(`出错了：${e.message}`)
-  } finally {
-    isLoading.value = false
-    isThinking.value = false
-    isStreaming.value = false
-  }
-}
-
-async function agentLoop(maxRounds) {
-  for (let round = 0; round < maxRounds; round++) {
-    isThinking.value = true
-    charState.value = 'thinking'
-
-    const result = await callAPIStream(loadSettings())
-
-    if (result.toolCalls?.length) {
-      for (const tc of result.toolCalls) {
-        const toolResult = await executeTool(tc.name, tc.arguments)
-        tc.result = toolResult
-        tc.status = 'done'
-        apiMessages.push({ role: 'tool', tool_call_id: tc.id, content: String(toolResult) })
-      }
-      charState.value = 'thinking'
-    } else {
-      speak(result.content)
-      break
-    }
-  }
-}
-
-async function callAPIStream(settings) {
-  const systemPrompt = settings.systemPrompt ||
-    '你是助理小姐，一位温柔聪明、精通量化投资的AI智能体。你可以使用工具来帮助用户。请用中文回复。'
-
-  const assistantMsg = {
-    id: ++msgId, role: 'assistant', content: '', toolCalls: [], streaming: true, time: getTime(),
-  }
-  isThinking.value = false
-  isStreaming.value = true
-  charState.value = 'talking'
-  displayMessages.value.push(assistantMsg)
-  await scrollToBottom()
-
-  // 本地 Kimi CLI 模式：走后端 /api/assistant/chat
-  let res
-  if (settings.provider === 'local_kimi') {
-    res = await fetch('/api/assistant/chat', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        messages: apiMessages,
-        system: systemPrompt,
-      }),
-    })
-  } else {
-    // 直连外部 API（开发模式走 Vite 代理）
-    const PROXY_MAP = {
-      'https://api.openai.com/v1':       '/proxy/openai/v1',
-      'https://api.kimi.com/coding/v1':  '/proxy/kimi/coding/v1',
-      'https://api.anthropic.com':       '/proxy/anthropic',
-    }
-    const isDev = import.meta.env.DEV && !window.electronAPI?.isElectron
-    const resolveUrl = url => isDev && PROXY_MAP[url] ? PROXY_MAP[url] : url
-
-    const defaultUrl = settings.provider === 'kimi' ? 'https://api.kimi.com/coding/v1' : 'https://api.openai.com/v1'
-    const baseUrl = resolveUrl(settings.apiUrl || defaultUrl)
-    const model = settings.model || (settings.provider === 'kimi' ? 'kimi-for-coding' : 'gpt-4o')
-    const extraHeaders = settings.provider === 'kimi' ? { 'user-agent': 'kimi-cli/1.0.0' } : {}
-
-    res = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${settings.apiKey}`, ...extraHeaders },
-      body: JSON.stringify({
-        model, stream: true,
-        messages: [{ role: 'system', content: systemPrompt }, ...apiMessages],
-        tools: TOOLS_SCHEMA, tool_choice: 'auto', max_tokens: 2048,
-      }),
-    })
-  }
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    assistantMsg.streaming = false
-    throw new Error(err?.error?.message || `HTTP ${res.status}`)
-  }
-
-  const reader = res.body.getReader()
-  const decoder = new TextDecoder()
-  let buf = ''
-  const tcAccum = {}
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buf += decoder.decode(value, { stream: true })
-    const lines = buf.split('\n')
-    buf = lines.pop() || ''
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue
-      const data = line.slice(6).trim()
-      if (data === '[DONE]') break
-      try {
-        const json = JSON.parse(data)
-        const delta = json.choices?.[0]?.delta
-        if (!delta) continue
-        if (delta.content) { assistantMsg.content += delta.content; await scrollToBottom() }
-        if (delta.tool_calls) {
-          for (const dtc of delta.tool_calls) {
-            const idx = dtc.index ?? 0
-            if (!tcAccum[idx]) {
-              tcAccum[idx] = { id: dtc.id || `tc_${idx}`, name: '', args: '' }
-              assistantMsg.toolCalls.push({ id: tcAccum[idx].id, name: '', arguments: '', status: 'running', open: true, result: undefined })
-            }
-            if (dtc.id) tcAccum[idx].id = dtc.id
-            if (dtc.function?.name) { tcAccum[idx].name += dtc.function.name; assistantMsg.toolCalls[idx].name = tcAccum[idx].name }
-            if (dtc.function?.arguments) { tcAccum[idx].args += dtc.function.arguments; assistantMsg.toolCalls[idx].arguments = tcAccum[idx].args }
-          }
-          await scrollToBottom()
-        }
-      } catch { /* skip */ }
-    }
-  }
-
-  assistantMsg.streaming = false
-  isStreaming.value = false
-
-  const toolCallsForApi = Object.values(tcAccum).map(tc => ({
-    id: tc.id, type: 'function', function: { name: tc.name, arguments: tc.args },
-  }))
-  apiMessages.push({
-    role: 'assistant',
-    content: assistantMsg.content || null,
-    tool_calls: toolCallsForApi.length ? toolCallsForApi : undefined,
-  })
-
-  return { content: assistantMsg.content, toolCalls: assistantMsg.toolCalls.length ? assistantMsg.toolCalls : null }
-}
-
-async function executeTool(name, argsRaw) {
-  const tool = toolDefs.find(t => t.name === name)
-  if (!tool) return `未找到工具: ${name}`
-  try {
-    const args = typeof argsRaw === 'string' ? JSON.parse(argsRaw) : argsRaw
-    return await tool.execute(args)
-  } catch (e) {
-    return `工具执行错误: ${e.message}`
-  }
-}
-
-function pushAssistant(text) {
-  displayMessages.value.push({ id: ++msgId, role: 'assistant', content: text, toolCalls: [], streaming: false, time: getTime() })
-  scrollToBottom()
-  speak(text)
-}
+// ── Chat ──────────────────────────────────────────────────
+const {
+  inputText, isLoading, isThinking, isStreaming,
+  displayMessages, currentSessionId,
+  hasSettings, currentModel, toolDefs, toolIcon,
+  sendMessage, clearHistory, fillSuggest,
+  scrollToBottom, autoResize,
+} = useChat({
+  speak,
+  stopSpeaking,
+  onStateChange: (state) => { charState.value = state },
+  messagesRef,
+  inputRef,
+})
 
 // ── Three.js + VRM ────────────────────────────────────────
 let renderer, scene, camera, animFrameId, clock
@@ -1070,10 +616,6 @@ async function loadVRM(url) {
 
 function retryLoadVRM() {
   loadVRM(getDefaultVrmUrl())
-}
-
-function downloadVRM() {
-  window.open('https://github.com/hinzka/52blendshapes-for-VRoid-face/raw/main/VRoid_V110_Female_v1.1.3.vrm', '_blank')
 }
 
 // ── VRM 每帧动画 ──────────────────────────────────────────
@@ -1377,13 +919,8 @@ function animate() {
 }
 
 // ── 生命周期 ──────────────────────────────────────────────
-function onFirstInteraction() {
-  document.removeEventListener('click', onFirstInteraction)
-}
-
 onMounted(() => {
   nextTick(() => { initThree() })
-  document.addEventListener('click', onFirstInteraction)
 })
 onUnmounted(() => {
   cancelAnimationFrame(animFrameId)
@@ -1403,7 +940,6 @@ onUnmounted(() => {
   renderer?.dispose()
   if (window._vrmResizeObs) { window._vrmResizeObs.disconnect(); delete window._vrmResizeObs }
   containerRef.value?.removeEventListener('mousemove', onMouseMove)
-  document.removeEventListener('click', onFirstInteraction)
 })
 </script>
 
@@ -1514,92 +1050,221 @@ onUnmounted(() => {
   white-space: nowrap; backdrop-filter: blur(8px); z-index: 5;
 }
 
-/* ── 右：Agent 面板 ─────────────────────────────────── */
+/* ── 右：Agent 面板（Claude Code 风格）──────────────── */
 .agent-panel {
   flex: 1; display: flex; flex-direction: column;
   background: var(--bg-primary);
-  border-left: .5px solid var(--separator);
-  min-width: 0;
+  border-left: 1px solid var(--separator);
+  min-width: 0; font-size: var(--size-body);
 }
 
-/* 顶栏 */
+/* ── 顶栏 ───────────────────────────────────────────── */
 .agent-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 16px; border-bottom: .5px solid var(--separator);
-  flex-shrink: 0; gap: 12px;
+  padding: 0 16px; height: 40px;
+  border-bottom: 1px solid var(--separator);
+  flex-shrink: 0;
 }
-.header-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-.agent-title { font-size: var(--size-headline); font-weight: 700; color: var(--label); white-space: nowrap; }
-.tool-chips { display: flex; flex-wrap: wrap; gap: 5px; }
-.tool-chip {
-  display: inline-flex; align-items: center; gap: 3px;
-  background: var(--fill); border-radius: 20px;
-  padding: 2px 9px; font-size: 11px; color: var(--label-2); white-space: nowrap;
+.header-left { display: flex; align-items: center; gap: 10px; }
+.agent-title {
+  font-size: 13px; font-weight: 600;
+  color: var(--label); letter-spacing: -.01em;
 }
-.tc-icon { font-size: 12px; }
-.header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.session-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--fill); border-radius: 4px;
+  padding: 1px 7px;
+}
+.session-dot {
+  width: 5px; height: 5px; border-radius: 50%; background: #34c759; flex-shrink: 0;
+}
+.session-id {
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 10px; color: var(--label-muted); letter-spacing: .03em;
+}
+.header-right { display: flex; align-items: center; gap: 8px; }
 .model-tag {
   font-size: 11px; color: var(--label-muted);
-  background: var(--fill); border-radius: 6px; padding: 2px 8px;
   font-family: 'SF Mono', Menlo, monospace;
+  padding: 1px 0;
 }
-.icon-btn {
-  width: 28px; height: 28px; border: none; background: var(--fill);
-  border-radius: var(--radius-sm); cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--label-muted); transition: all .15s;
+.hdr-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 26px; padding: 0 10px;
+  border: 1px solid var(--separator-opaque); border-radius: 5px;
+  background: var(--bg-primary); color: var(--label-2);
+  font-size: 12px; font-family: inherit; cursor: pointer;
+  transition: border-color .12s, color .12s;
 }
-.icon-btn:hover { background: var(--fill-2); color: var(--label); }
+.hdr-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-/* 消息区 */
-.messages-area {
-  flex: 1; overflow-y: auto; padding: 16px;
-  display: flex; flex-direction: column; gap: 14px;
+/* ── Feed（消息流）────────────────────────────────── */
+.feed {
+  flex: 1; overflow-y: auto; padding: 0;
+  display: flex; flex-direction: column;
 }
 
-/* 空状态 */
+/* ── 空状态 ─────────────────────────────────────── */
 .empty-state {
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  text-align: center; padding: 40px 20px;
+  text-align: center; padding: 48px 24px; gap: 0;
 }
-.empty-icon { font-size: 42px; margin-bottom: 14px; }
-.empty-title { font-size: var(--size-title3); font-weight: 700; color: var(--label); margin-bottom: 6px; }
-.empty-sub { font-size: var(--size-body); color: var(--label-muted); margin-bottom: 24px; }
-.suggestions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.empty-logo {
+  color: var(--label-muted); opacity: .4; margin-bottom: 16px;
+}
+.empty-title {
+  font-size: 15px; font-weight: 600; color: var(--label);
+  margin-bottom: 5px; letter-spacing: -.01em;
+}
+.empty-sub {
+  font-size: 12px; color: var(--label-muted); margin-bottom: 28px;
+}
+.suggestions { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
 .suggest-btn {
-  border: 1px solid var(--separator-opaque); background: var(--bg-secondary);
-  border-radius: 20px; padding: 6px 14px; font-size: var(--size-xs);
-  color: var(--label-2); cursor: pointer; font-family: inherit; transition: all .15s;
+  border: 1px solid var(--separator-opaque);
+  background: var(--bg-secondary); border-radius: 6px;
+  padding: 5px 12px; font-size: 12px; color: var(--label-2);
+  cursor: pointer; font-family: inherit; transition: border-color .12s, color .12s;
 }
-.suggest-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,122,255,.05); }
+.suggest-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-/* 消息 */
-.msg { display: flex; gap: 8px; max-width: 90%; }
-.msg-user { align-self: flex-end; flex-direction: column; align-items: flex-end; max-width: 78%; }
-.msg-assistant { align-self: flex-start; }
-
-.avatar {
-  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
-  background: linear-gradient(135deg, #e0a8d8, #9060c8);
-  display: flex; align-items: center; justify-content: center; font-size: 15px;
+/* ── Feed 行共用 ─────────────────────────────────── */
+.feed-row {
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--separator);
+  line-height: 1.6;
 }
-.msg-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
+.feed-row:last-child { border-bottom: none; }
 
-.user-bubble, .assistant-bubble {
-  padding: 9px 13px; border-radius: 16px;
-  font-size: var(--size-body); line-height: 1.55; word-break: break-word;
+/* ── 用户行 ─────────────────────────────────────── */
+.feed-user {
+  display: flex; align-items: flex-start; gap: 8px;
+  background: var(--bg-primary);
 }
-.user-bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
-.assistant-bubble {
-  background: var(--bg-secondary); color: var(--label);
-  border-bottom-left-radius: 4px; border: .5px solid var(--separator);
-  position: relative;
+.feed-prompt {
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 13px; font-weight: 700;
+  color: var(--accent); flex-shrink: 0; margin-top: 1px;
+  user-select: none;
+}
+.feed-user-text {
+  flex: 1; font-size: var(--size-body);
+  color: var(--label); word-break: break-word;
 }
 
-.msg-time { font-size: 10px; color: var(--label-muted); padding: 0 2px; }
-.msg-user .msg-time { text-align: right; }
+/* ── 助理行 ─────────────────────────────────────── */
+.feed-assistant {
+  background: var(--bg-primary);
+  display: flex; flex-direction: column; gap: 6px;
+}
 
+/* ── 工具卡片（Claude Code 核心元素）────────────── */
+.tool-card {
+  border-radius: 6px; overflow: hidden;
+  border: 1px solid var(--separator-opaque);
+  /* 左侧彩色竖线 = Claude Code 标志性设计 */
+  border-left: 3px solid var(--separator-opaque);
+  font-size: 12px; transition: border-left-color .15s;
+}
+.tool-card.tool-running { border-left-color: #f0a500; }
+.tool-card.tool-done    { border-left-color: #34c759; }
+.tool-card.tool-error   { border-left-color: #ff3b30; }
+
+/* 卡片头 */
+.tool-card-head {
+  display: flex; align-items: center; gap: 7px;
+  padding: 6px 10px; cursor: pointer; user-select: none;
+  background: var(--bg-secondary); transition: background .1s;
+}
+.tool-card-head:hover { background: var(--fill); }
+
+.tool-step {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--fill-2); color: var(--label-muted);
+  font-size: 9px; font-weight: 700; display: flex;
+  align-items: center; justify-content: center; flex-shrink: 0;
+}
+.tool-icon { font-size: 13px; flex-shrink: 0; }
+.tool-name {
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 12px; font-weight: 600; color: var(--label);
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* 状态点 */
+.tool-status-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+}
+.tool-status-dot.running {
+  background: #f0a500;
+  animation: tool-pulse .8s ease-in-out infinite;
+}
+.tool-status-dot.done  { background: #34c759; }
+.tool-status-dot.error { background: #ff3b30; }
+@keyframes tool-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* 状态标签 */
+.tool-status-label {
+  font-size: 10px; font-weight: 500;
+}
+.tool-status-label.running { color: #f0a500; }
+.tool-status-label.done    { color: #34c759; }
+.tool-status-label.error   { color: #ff3b30; }
+
+/* 展开箭头 */
+.tool-chevron {
+  color: var(--label-muted); flex-shrink: 0;
+  display: flex; align-items: center;
+  transition: transform .18s ease;
+}
+.tool-chevron.open { transform: rotate(0deg); }
+.tool-chevron:not(.open) { transform: rotate(-90deg); }
+
+/* 卡片内容 */
+.tool-card-body { padding: 0; }
+
+.tool-section {
+  padding: 8px 10px;
+  border-top: 1px solid var(--separator);
+}
+.tool-section-label {
+  font-size: 9px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--label-muted);
+  margin-bottom: 5px;
+}
+.tool-code {
+  background: var(--bg-primary); border-radius: 4px;
+  padding: 6px 8px; margin: 0;
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 11px; color: var(--label-2);
+  white-space: pre-wrap; word-break: break-all;
+  max-height: 160px; overflow-y: auto;
+  border: 1px solid var(--separator);
+}
+.tool-output {
+  font-size: 12px; color: var(--label-2);
+  line-height: 1.55; font-family: 'SF Mono', Menlo, monospace;
+  white-space: pre-wrap; word-break: break-all;
+  max-height: 200px; overflow-y: auto;
+}
+
+/* 折叠动画 */
+.fold-enter-active, .fold-leave-active { transition: opacity .15s, transform .15s; }
+.fold-enter-from, .fold-leave-to { opacity: 0; transform: translateY(-4px); }
+
+/* ── 助理文字回复 ─────────────────────────────────── */
+.feed-text {
+  font-size: var(--size-body); color: var(--label);
+  line-height: 1.65; word-break: break-word;
+  padding: 2px 0;
+}
+.feed-time {
+  font-size: 10px; color: var(--label-muted);
+  padding-top: 2px;
+}
+
+/* ── 打字光标 ─────────────────────────────────────── */
 .cursor {
   display: inline-block; width: 2px; height: 1em;
   background: var(--accent); margin-left: 2px; vertical-align: text-bottom;
@@ -1607,91 +1272,104 @@ onUnmounted(() => {
 }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 
-/* 工具调用块 */
-.tc-block {
-  border: 1px solid var(--separator-opaque);
-  border-radius: var(--radius); overflow: hidden;
-  background: var(--bg-secondary); font-size: var(--size-xs);
+/* ── 思考指示 ─────────────────────────────────────── */
+.thinking {
+  display: inline-flex; align-items: center; gap: 6px;
 }
-.tc-block.tc-running { border-color: rgba(255,204,0,.4); }
-.tc-block.tc-done    { border-color: rgba(52,199,89,.4); }
-.tc-block.tc-error   { border-color: rgba(255,59,48,.4); }
-
-.tc-head {
-  display: flex; align-items: center; gap: 7px;
-  padding: 7px 11px; cursor: pointer; user-select: none; transition: background .1s;
+.thinking-label {
+  font-size: 12px; color: var(--label-muted);
+  font-style: italic;
 }
-.tc-head:hover { background: var(--fill); }
-.tc-icon-wrap { font-size: 14px; flex-shrink: 0; }
-.tc-name { font-family: 'SF Mono', Menlo, monospace; font-weight: 600; color: var(--label); flex: 1; }
-.tc-badge { font-size: 10px; padding: 1px 7px; border-radius: 10px; font-weight: 500; }
-.tc-badge.running { background: #ffcc00; color: #7a5f00; }
-.tc-badge.done    { background: #34c759; color: #fff; }
-.tc-badge.error   { background: var(--red, #ff3b30); color: #fff; }
-.tc-chevron { font-size: 10px; color: var(--label-muted); margin-left: auto; }
-.tc-body { padding: 0 11px 10px; }
-.tc-section { margin-top: 8px; }
-.tc-section-label {
-  font-size: 10px; font-weight: 600; text-transform: uppercase;
-  letter-spacing: .05em; color: var(--label-muted); margin-bottom: 4px;
-}
-.tc-code {
-  background: rgba(0,0,0,.05); border-radius: 6px; padding: 7px 10px;
-  font-size: 11px; font-family: 'SF Mono', Menlo, monospace;
-  color: var(--label); white-space: pre-wrap; word-break: break-all;
-  margin: 0; max-height: 180px; overflow-y: auto;
-}
-.tc-result { font-size: var(--size-xs); color: var(--label-2); line-height: 1.5; }
-
-.slide-enter-active, .slide-leave-active { transition: all .2s ease; }
-.slide-enter-from, .slide-leave-to { opacity: 0; transform: translateY(-6px); }
-
-/* 思考 */
-.thinking-row { align-items: flex-end; }
 .thinking-dots {
-  display: flex; align-items: center; gap: 5px; padding: 12px 14px;
-  background: var(--bg-secondary); border-radius: 16px; border-bottom-left-radius: 4px;
-  border: .5px solid var(--separator);
+  display: flex; align-items: center; gap: 3px;
 }
-.thinking-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--label-muted); animation: dot-bounce 1.2s ease-in-out infinite; }
-.thinking-dots span:nth-child(2) { animation-delay: .2s; }
-.thinking-dots span:nth-child(3) { animation-delay: .4s; }
-@keyframes dot-bounce { 0%,60%,100%{transform:translateY(0);opacity:.5} 30%{transform:translateY(-5px);opacity:1} }
+.thinking-dots i {
+  display: block; width: 4px; height: 4px;
+  border-radius: 50%; background: var(--label-muted);
+  animation: tdot 1s ease-in-out infinite;
+}
+.thinking-dots i:nth-child(2) { animation-delay: .18s; }
+.thinking-dots i:nth-child(3) { animation-delay: .36s; }
+@keyframes tdot { 0%,60%,100%{opacity:.3;transform:scale(.8)} 30%{opacity:1;transform:scale(1)} }
 
-/* Markdown */
-:deep(.md-pre) { background: #1a1a2e; border-radius: 8px; padding: 12px 14px; overflow-x: auto; margin: 6px 0; }
-:deep(.md-code) { font-family: 'SF Mono', Menlo, monospace; font-size: 12px; color: #e0e0ff; line-height: 1.5; }
-:deep(.md-inline) { background: rgba(0,0,0,.08); padding: 1px 5px; border-radius: 4px; font-family: 'SF Mono', Menlo, monospace; font-size: .9em; }
-.user-bubble :deep(.md-inline) { background: rgba(255,255,255,.2); }
-:deep(.md-h) { font-weight: 700; margin: 4px 0; }
-:deep(h1.md-h) { font-size: 18px; }
-:deep(h2.md-h) { font-size: 16px; }
-:deep(h3.md-h) { font-size: 14px; }
+/* ── Markdown ─────────────────────────────────────── */
+:deep(.md-pre) {
+  background: var(--bg-secondary); border: 1px solid var(--separator-opaque);
+  border-radius: 6px; padding: 10px 12px; overflow-x: auto; margin: 6px 0;
+}
+:deep(.md-code) {
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 12px; color: var(--label); line-height: 1.5;
+}
+:deep(.md-inline) {
+  background: var(--fill-2); padding: 1px 5px; border-radius: 3px;
+  font-family: 'SF Mono', Menlo, monospace; font-size: .88em;
+  color: var(--label-2);
+}
+:deep(.md-h) { font-weight: 700; margin: 8px 0 4px; }
+:deep(h1.md-h) { font-size: 17px; }
+:deep(h2.md-h) { font-size: 15px; }
+:deep(h3.md-h) { font-size: 13px; }
 :deep(li) { margin-left: 18px; }
 :deep(strong) { font-weight: 600; }
+:deep(a) { color: var(--accent); text-decoration: none; }
+:deep(a:hover) { text-decoration: underline; }
 
-/* ── 输入区 ──────────────────────────────────────────── */
-.input-area {
-  display: flex; align-items: flex-end; gap: 8px;
-  padding: 12px 14px; border-top: .5px solid var(--separator);
-  flex-shrink: 0; background: var(--bg-primary);
+/* ── 输入栏 ───────────────────────────────────────── */
+.input-bar {
+  flex-shrink: 0;
+  padding: 12px 16px 10px;
+  border-top: 1px solid var(--separator);
+  background: var(--bg-primary);
+}
+.input-wrap {
+  display: flex; align-items: flex-end; gap: 0;
+  border: 1px solid var(--separator-opaque); border-radius: 8px;
+  background: var(--bg-secondary); overflow: hidden;
+  transition: border-color .15s;
+}
+.input-wrap:focus-within { border-color: var(--accent); }
+
+.input-prompt {
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 13px; font-weight: 700; color: var(--label-muted);
+  padding: 8px 0 8px 12px; flex-shrink: 0; user-select: none;
+  line-height: 1.4; align-self: flex-start; margin-top: 1px;
 }
 .agent-input {
-  flex: 1; min-height: 36px; max-height: 120px; padding: 8px 12px;
-  border: 1px solid var(--separator-opaque); border-radius: 18px;
-  background: var(--bg-secondary); font-size: var(--size-body);
-  font-family: inherit; color: var(--label); resize: none; outline: none;
-  line-height: 1.4; transition: border-color .15s; overflow-y: auto;
+  flex: 1; min-height: 36px; max-height: 140px;
+  padding: 8px 8px 8px 6px;
+  border: none; background: transparent;
+  font-size: var(--size-body); font-family: inherit;
+  color: var(--label); resize: none; outline: none; line-height: 1.4;
+  overflow-y: auto;
 }
-.agent-input:focus { border-color: var(--accent); }
+.agent-input::placeholder { color: var(--label-muted); }
 .agent-input:disabled { opacity: .5; }
+
 .send-btn {
-  width: 36px; height: 36px; border-radius: 50%; border: none;
-  background: var(--fill-2); color: var(--label-muted); cursor: pointer;
+  width: 34px; height: 34px; border-radius: 6px; border: none; margin: 3px;
+  background: var(--accent); color: #fff; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; transition: all .15s;
+  flex-shrink: 0; transition: opacity .12s;
+  align-self: flex-end;
 }
-.send-btn.active { background: var(--accent); color: #fff; }
-.send-btn:disabled { opacity: .4; cursor: not-allowed; }
-.send-btn.active:not(:disabled):hover { background: #0066dd; }
+.send-btn:disabled { opacity: .3; cursor: not-allowed; }
+.send-btn:not(:disabled):hover { opacity: .85; }
+
+.input-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 6px; padding: 0 2px;
+}
+.input-hint {
+  font-size: 10px; color: var(--label-muted);
+}
+.input-tools {
+  display: flex; gap: 6px;
+}
+.input-tool-chip {
+  font-size: 10px; color: var(--label-muted);
+  background: var(--fill); border-radius: 4px;
+  padding: 1px 6px;
+}
 </style>

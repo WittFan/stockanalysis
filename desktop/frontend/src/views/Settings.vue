@@ -253,8 +253,12 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-
-const STORAGE_KEY = 'assistant_settings'
+import {
+  STORAGE_KEY, PROVIDER_DEFAULTS, edgeVoices,
+  VRM_PRESETS, SCENE_PRESETS,
+  saveSettings as saveSettingsToStore,
+  resolveUrl,
+} from '@/composables/useSettings.js'
 
 const DEFAULT_SYSTEM_PROMPT = `你是助理小姐，一位温柔、聪明、可爱的AI助理。你有着美丽的外表和善解人意的性格。
 你喜欢用简洁友好的语言与用户交流，偶尔会用一些可爱的语气词。
@@ -273,23 +277,11 @@ const form = reactive({
   ttsVoice: 'zh-CN-XiaoxiaoNeural',
   ttsRate: '+0%',
   ttsPitch: '+0Hz',
-  ttsStyle: 'default',
   ttsVoiceUri: '',
   vrmUrl: '',
 })
 
-const VRM_PRESETS = [
-  { id: 'avatar_b',    label: 'AvatarSample B', icon: '🧍', desc: '本地 VRM 模型，白色背景，手自然下垂' },
-  { id: 'official',    label: '官方示例',  icon: '🧍', desc: 'three-vrm 默认模型' },
-  { id: 'vroid_base',  label: 'VRoid 素体', icon: '👩', desc: 'VRoid Studio 女性素体' },
-  { id: 'custom',      label: '自定义',    icon: '🔧', desc: '粘贴 URL 或选择本地文件' },
-]
-
-const SCENE_PRESETS = [
-  { id: 'auto',  label: '自动（跟随模型）' },
-  { id: 'dark',  label: '深色空间' },
-  { id: 'light', label: '明亮空间' },
-]
+// VRM_PRESETS / SCENE_PRESETS 已从 useSettings.js 导入
 
 const isTesting = ref(false)
 const testResult = ref(null)
@@ -328,12 +320,7 @@ const presets = [
 ]
 
 // 各提供商默认配置
-const PROVIDER_DEFAULTS = {
-  openai:     { apiUrl: 'https://api.openai.com/v1',      model: 'gpt-4o' },
-  kimi:       { apiUrl: 'https://api.kimi.com/coding/v1', model: 'kimi-for-coding' },
-  anthropic:  { apiUrl: 'https://api.anthropic.com',      model: 'claude-opus-4-6' },
-  local_kimi: { apiUrl: '', model: '' },
-}
+// PROVIDER_DEFAULTS 已从 useSettings.js 导入
 
 function onProviderChange() {
   const defaults = PROVIDER_DEFAULTS[form.provider]
@@ -379,15 +366,6 @@ async function testConnection() {
   isTesting.value = true
   testResult.value = null
 
-  // 开发模式走 Vite 代理，Electron/生产直连
-  const PROXY_MAP = {
-    'https://api.openai.com/v1':  '/proxy/openai/v1',
-    'https://api.kimi.com/coding/v1': '/proxy/kimi/coding/v1',
-    'https://api.anthropic.com':  '/proxy/anthropic',
-  }
-  const isDev = import.meta.env.DEV && !window.electronAPI?.isElectron
-  const resolveUrl = (url) => isDev && PROXY_MAP[url] ? PROXY_MAP[url] : url
-
   try {
     if (form.provider === 'anthropic') {
       // Anthropic 原生格式
@@ -413,7 +391,7 @@ async function testConnection() {
       }
     } else {
       // OpenAI 兼容格式（OpenAI / Kimi Code / 其他）
-      const defaultUrl = form.provider === 'kimi' ? 'https://api.kimi.com/coding/v1' : 'https://api.openai.com/v1'
+      const defaultUrl = PROVIDER_DEFAULTS[form.provider]?.apiUrl || 'https://api.openai.com/v1'
       const baseUrl = resolveUrl(form.apiUrl || defaultUrl)
       const extraHeaders = form.provider === 'kimi' ? { 'user-agent': 'kimi-cli/1.0.0' } : {}
       const res = await fetch(`${baseUrl}/chat/completions`, {
@@ -460,25 +438,17 @@ function onVrmFile(e) {
 }
 
 function saveVrmSettings() {
-  const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
-  data.vrmPreset = form.vrmPreset
-  data.vrmPresetUserSet = true   // 标记为用户主动选择
-  data.scenePreset = form.scenePreset
-  data.vrmUrl = form.vrmUrl
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  saveSettingsToStore({
+    vrmPreset: form.vrmPreset,
+    vrmPresetUserSet: true,   // 标记为用户主动选择
+    scenePreset: form.scenePreset,
+    vrmUrl: form.vrmUrl,
+  })
   vrmSaveStatus.value = '已保存，切换到助理页面生效'
   setTimeout(() => { vrmSaveStatus.value = '' }, 3000)
 }
 
-const edgeVoices = [
-  { voice: 'zh-CN-XiaoxiaoNeural', name: '晓晓', desc: '温柔女性（推荐）' },
-  { voice: 'zh-CN-XiaoyiNeural', name: '晓伊', desc: '活泼女性' },
-  { voice: 'zh-CN-YunjianNeural', name: '云健', desc: '成熟男性' },
-  { voice: 'zh-CN-YunxiNeural', name: '云希', desc: '年轻男性' },
-  { voice: 'zh-CN-YunxiaNeural', name: '云夏', desc: '少年男性' },
-  { voice: 'zh-CN-liaoning-XiaobeiNeural', name: '晓北', desc: '东北话' },
-  { voice: 'zh-CN-shaanxi-XiaoniNeural', name: '晓妮', desc: '陕西话' },
-]
+// edgeVoices 已从 useSettings.js 导入
 
 async function testTTS() {
   try {
@@ -508,9 +478,7 @@ async function testTTS() {
 
 function saveSettings() {
   // 只保存 API/对话相关字段，VRM/场景设置由 saveVrmSettings 单独管理
-  const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
-  const data = {
-    ...existing,
+  saveSettingsToStore({
     provider:     form.provider,
     apiKey:       form.apiKey,
     apiUrl:       form.apiUrl,
@@ -520,10 +488,8 @@ function saveSettings() {
     ttsVoice:     form.ttsVoice,
     ttsRate:      form.ttsRate,
     ttsPitch:     form.ttsPitch,
-  
-    ttsVoiceUri:  form.ttsVoiceUri,
-  }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+    ttsVoiceUri: form.ttsVoiceUri,
+  })
   saveStatus.value = 'saved'
   setTimeout(() => { saveStatus.value = '' }, 2000)
 }

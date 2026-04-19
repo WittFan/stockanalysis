@@ -15,6 +15,7 @@ build/
 data/data.db
 data/duck.db
 data/duck.db.wal
+data/agent.db
 data/csvs/
 data/projs/
 data/*.csv

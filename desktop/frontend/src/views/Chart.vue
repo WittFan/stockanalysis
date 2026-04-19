@@ -203,35 +203,8 @@ onMounted(() => fetchChart(period.value))
   margin-bottom: var(--space-2);
 }
 
-/* ── Segmented Control（Apple HIG 规范样式） ── */
-.seg-ctrl {
-  display: flex;
-  background: var(--fill-3);
-  border-radius: var(--radius-sm);
-  padding: 2px;
-  gap: 2px;
-}
-
-.seg-btn {
-  flex: 1;
-  height: 24px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--label);
-  font-size: var(--size-xs);
-  font-family: inherit;
-  font-weight: 400;
-  cursor: pointer;
-  transition: background .12s, box-shadow .12s;
-}
-.seg-btn:hover { background: var(--fill-4); }
-.seg-btn.active {
-  background: var(--bg-primary);
-  box-shadow: var(--shadow-xs);
-  font-weight: 500;
-  color: var(--label);
-}
+/* Chart.vue 的 seg-btn 需要占满宽度 */
+.seg-btn { flex: 1; }
 
 /* ── 搜索框（Apple 风格：灰底无边框） ── */
 .search-wrap {

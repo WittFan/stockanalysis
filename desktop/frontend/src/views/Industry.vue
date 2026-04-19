@@ -159,36 +159,6 @@ onMounted(() => fetchIndustry(period.value))
   margin-left: auto;
 }
 
-/* ── Segmented Control ── */
-.seg-ctrl {
-  display: flex;
-  background: var(--fill-3);
-  border-radius: var(--radius-sm);
-  padding: 2px;
-  gap: 2px;
-}
-
-.seg-btn {
-  height: 24px;
-  padding: 0 var(--space-3);
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--label);
-  font-size: var(--size-xs);
-  font-family: inherit;
-  font-weight: 400;
-  cursor: pointer;
-  transition: background .12s, box-shadow .12s;
-  white-space: nowrap;
-}
-.seg-btn:hover { background: var(--fill-4); }
-.seg-btn.active {
-  background: var(--bg-primary);
-  box-shadow: var(--shadow-xs);
-  font-weight: 500;
-}
-
 /* ── 内容区 ── */
 .ind-body {
   padding-top: 44px; /* toolbar 高度 */
