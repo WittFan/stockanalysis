@@ -5,6 +5,13 @@
     <div class="character-panel" ref="containerRef" :style="sceneCssVars">
       <canvas ref="canvasRef" class="three-canvas" />
 
+      <!-- 3D 初始化前占位：页面打开后 600ms 才启动 Three.js -->
+      <!-- 3D 初始化前占位：页面打开后 600ms 才启动 Three.js -->
+      <div class="vrm-overlay vrm-overlay--placeholder" v-if="!vrmLoading && !vrmError && !vrmModelLoaded">
+        <div style="font-size:36px;margin-bottom:12px">🌸</div>
+        <div class="vrm-load-text">正在唤醒助理小姐…</div>
+      </div>
+
       <!-- VRM 加载中 -->
       <div class="vrm-overlay" v-if="vrmLoading">
         <div class="vrm-spinner" />
@@ -344,9 +351,10 @@ let currentGLB = null         // 纯 GLB 场景（非 VRM）
 let glbEmotionLight = null    // GLB 情绪点光源
 let glbBaseY = 0              // GLB 模型初始 Y 坐标
 
-const vrmLoading  = ref(false)
-const vrmError    = ref('')
-const vrmProgress = ref(0)
+const vrmLoading   = ref(false)
+const vrmError     = ref('')
+const vrmProgress  = ref(0)
+const vrmModelLoaded = ref(false)  // 3D 模型是否已成功加载（用于占位显示控制）
 let lastVrmUrl = ''
 
 // ── 程序化动作系统 ────────────────────────────────────────
@@ -467,6 +475,7 @@ async function loadVRM(url) {
   vrmError.value   = ''
   vrmProgress.value = 0
 
+  vrmModelLoaded.value = false
   // 清除旧 VRM 模型
   if (currentVRM) {
     scene.remove(currentVRM.scene)
@@ -515,6 +524,7 @@ async function loadVRM(url) {
       scene.add(glbScene)
       currentGLB = glbScene
       glbBaseY   = glbScene.position.y
+      vrmModelLoaded.value = true
 
       // 根据包围球半径自动计算合适相机距离（视角 28°，保证模型整体在画面内）
       const sphere = new THREE.Sphere()
@@ -602,7 +612,7 @@ async function loadVRM(url) {
     currentVRM = vrm
     vrmProgress.value = 100
     vrmLoading.value  = false
-
+    vrmModelLoaded.value = true
 
   } catch (e) {
     vrmError.value   = e.message || '加载失败'
@@ -920,11 +930,10 @@ function animate() {
 
 // ── 生命周期 ──────────────────────────────────────────────
 onMounted(() => {
-  // 延迟初始化 Three.js，优先保证 DOM/对话区域先渲染
-  // requestIdleCallback 在浏览器空闲时执行；不支持时回退到 setTimeout
+  // 固定延迟 600ms 后再初始化 Three.js，确保右侧对话区域先完整渲染
+  // 避免左侧 3D 模型与页面内容竞争主线程，提升感知打开速度
   nextTick(() => {
-    const defer = window.requestIdleCallback || ((cb) => setTimeout(cb, 200))
-    defer(() => { initThree() })
+    setTimeout(() => { initThree() }, 600)
   })
 })
 onUnmounted(() => {
