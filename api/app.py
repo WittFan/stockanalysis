@@ -53,6 +53,7 @@ def create_app(xlsx_path: str = None, root_path: Path = None) -> Flask:
     from api.routes.download import make_download_bp
     from api.routes.assistant import bp as assistant_bp
     from api.routes.tts import bp as tts_bp
+    from api.routes.stockpool import bp as stockpool_bp
     from api.agent import make_agent_bp
     from api.agent.db import AgentDB
     from api.agent.tool_registry import build_default_registry
@@ -64,6 +65,7 @@ def create_app(xlsx_path: str = None, root_path: Path = None) -> Flask:
     app.register_blueprint(make_download_bp(download_handler),  url_prefix='/api')
     app.register_blueprint(assistant_bp,                        url_prefix='/api')
     app.register_blueprint(tts_bp,                              url_prefix='/api')
+    app.register_blueprint(stockpool_bp,                        url_prefix='/api')
 
     agent_db = AgentDB()
     agent_db.create_tables()

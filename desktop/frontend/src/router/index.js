@@ -8,6 +8,7 @@ const Value     = () => import('@/views/Value.vue')
 const Download  = () => import('@/views/Download.vue')
 const Assistant = () => import('@/views/Assistant.vue')
 const Settings  = () => import('@/views/Settings.vue')
+const Stockpool = () => import('@/views/Stockpool.vue')
 
 const routes = [
   { path: '/',           redirect: '/assistant' },
@@ -16,6 +17,7 @@ const routes = [
   { path: '/backtest',   component: Backtest,  meta: { title: '策略回测' } },
   { path: '/value',      component: Value,     meta: { title: '价值坐标系' } },
   { path: '/download',   component: Download,  meta: { title: '数据管理' } },
+  { path: '/stockpool',  component: Stockpool, meta: { title: '股票池' } },
   { path: '/assistant',  component: Assistant, meta: { title: '助理' } },
   { path: '/settings',   component: Settings,  meta: { title: '设置' } },
 ]

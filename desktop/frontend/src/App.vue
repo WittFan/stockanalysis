@@ -10,6 +10,7 @@
   -->
   <nav class="sa-nav">
     <RouterLink to="/assistant" class="nav-btn" :class="{ active: route.path === '/assistant' }">助理</RouterLink>
+    <RouterLink to="/stockpool" class="nav-btn" :class="{ active: route.path === '/stockpool' }">股票池</RouterLink>
     <RouterLink to="/value"     class="nav-btn" :class="{ active: route.path === '/value' }">价值坐标系</RouterLink>
     <RouterLink to="/chart"     class="nav-btn" :class="{ active: route.path === '/chart' }">趋势图</RouterLink>
     <RouterLink to="/industry"  class="nav-btn" :class="{ active: route.path === '/industry' }">行业分组</RouterLink>

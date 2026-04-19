@@ -193,9 +193,21 @@ class ChartHandler:
         self._xlsx_path = xlsx_path
 
     def _ensure_init(self):
-        """懒加载股票池，首次请求时才读取 xlsx"""
+        """懒加载股票池，优先从数据库读取，回退到 xlsx"""
         if self.code_to_name:
             return
+        # 优先从 PostgreSQL 读取
+        try:
+            from orm_models.api import session
+            from orm_models.table_models.stockpool import StockPool
+            rows = session.query(StockPool).all()
+            if rows:
+                self.code_to_name = {r.ts_code: r.name for r in rows}
+                self.symbols = list(self.code_to_name.keys())
+                return
+        except Exception:
+            pass
+        # 回退到 xlsx
         if self._xlsx_path and Path(self._xlsx_path).exists():
             self.code_to_name = load_stockpool(self._xlsx_path)
             self.symbols      = list(self.code_to_name.keys())
