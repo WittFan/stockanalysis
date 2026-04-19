@@ -19,7 +19,7 @@
         />
       </div>
       <div class="toolbar-actions">
-        <button class="btn btn-ghost" :disabled="importing" @click="importXlsx">
+        <button class="btn" :disabled="importing" @click="importXlsx">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
           </svg>
@@ -41,7 +41,11 @@
 
     <!-- 空状态 -->
     <div v-else-if="!list.length" class="empty-state">
-      <div style="font-size:36px;margin-bottom:12px">📋</div>
+      <div class="empty-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>
+        </svg>
+      </div>
       <div class="empty-title">股票池为空</div>
       <div class="empty-sub">点击「从 xlsx 导入」或「新增股票」开始管理</div>
     </div>
@@ -257,17 +261,17 @@ onMounted(fetchList)
   gap: var(--space-2);
 }
 
-/* ── 搜索框 ── */
+/* ── 搜索框（Apple HIG：灰底无边框，28px） ── */
 .search-wrap {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  background: var(--fill-3);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-2);
+  gap: var(--space-1);
+  height: 28px;
   flex: 1;
   max-width: 320px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius-sm);
-  padding: 0 var(--space-3);
-  height: 32px;
   color: var(--label-muted);
 }
 .search-input {
@@ -275,13 +279,14 @@ onMounted(fetchList)
   border: none;
   background: transparent;
   font-size: var(--size-sm);
+  font-family: inherit;
   color: var(--label);
   outline: none;
-  font-family: inherit;
+  min-width: 0;
 }
 .search-input::placeholder { color: var(--label-muted); }
 
-/* ── 数据表格 ── */
+/* ── 数据表格（Apple HIG 风格） ── */
 .data-table {
   background: var(--bg-primary);
   border-radius: var(--radius);
@@ -292,20 +297,20 @@ onMounted(fetchList)
 .table-header {
   display: flex;
   align-items: center;
-  height: 32px;
+  height: 28px;
   padding: 0 var(--space-4);
   background: var(--bg-secondary);
   border-bottom: 0.5px solid var(--separator-opaque);
   font-weight: 600;
   color: var(--label-2);
-  font-size: 11px;
+  font-size: var(--size-xs);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
 }
 .table-row {
   display: flex;
   align-items: center;
-  height: 40px;
+  height: 36px;
   padding: 0 var(--space-4);
   border-bottom: 0.5px solid var(--separator-opaque);
   transition: background .1s;
@@ -317,14 +322,14 @@ onMounted(fetchList)
 .th-code, .td-code { width: 120px; flex-shrink: 0; font-family: 'SF Mono', Menlo, monospace; }
 .th-name, .td-name { flex: 1; min-width: 0; }
 .th-date, .td-date { width: 110px; flex-shrink: 0; color: var(--label-2); }
-.th-action, .td-action { width: 80px; flex-shrink: 0; justify-content: flex-end; gap: 4px; }
+.th-action, .td-action { width: 80px; flex-shrink: 0; justify-content: flex-end; gap: var(--space-1); }
 
 /* ── 图标按钮 ── */
 .btn-icon {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
   background: transparent;
   color: var(--label-muted);
   cursor: pointer;
@@ -344,12 +349,17 @@ onMounted(fetchList)
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 48px 24px;
+  padding: var(--space-10) var(--space-6);
 }
-.empty-title { font-size: 15px; font-weight: 600; color: var(--label); margin-bottom: 5px; }
-.empty-sub { font-size: 12px; color: var(--label-muted); }
+.empty-icon {
+  color: var(--label-muted);
+  opacity: .35;
+  margin-bottom: var(--space-3);
+}
+.empty-title { font-size: var(--size-headline); font-weight: 600; color: var(--label); margin-bottom: var(--space-1); }
+.empty-sub { font-size: var(--size-sm); color: var(--label-muted); }
 
-/* ── 弹窗 ── */
+/* ── 弹窗（Apple HIG：毛玻璃遮罩 + 圆角卡片） ── */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -358,13 +368,13 @@ onMounted(fetchList)
   align-items: center;
   justify-content: center;
   z-index: 100;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px) saturate(1.6);
 }
 .modal {
   width: 400px;
   max-width: 90vw;
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
+  background: rgba(255,255,255,0.94);
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow);
   overflow: hidden;
 }
@@ -372,7 +382,7 @@ onMounted(fetchList)
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  padding: var(--space-4);
   border-bottom: 0.5px solid var(--separator-opaque);
 }
 .modal-title { font-size: var(--size-headline); font-weight: 600; margin: 0; }
@@ -383,21 +393,21 @@ onMounted(fetchList)
 }
 .modal-close:hover { background: var(--fill); color: var(--label); }
 
-.modal-body { padding: 16px; }
-.form-row { margin-bottom: 14px; }
+.modal-body { padding: var(--space-4); }
+.form-row { margin-bottom: var(--space-3); }
 .form-row:last-child { margin-bottom: 0; }
 .form-label {
   display: block;
-  font-size: 12px;
+  font-size: var(--size-xs);
   font-weight: 500;
   color: var(--label-2);
-  margin-bottom: 5px;
+  margin-bottom: var(--space-1);
 }
 .required { color: var(--red); }
 .form-input {
   width: 100%;
-  height: 34px;
-  padding: 0 10px;
+  height: 32px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--separator-opaque);
   border-radius: var(--radius-sm);
   background: var(--bg-secondary);
@@ -414,7 +424,7 @@ onMounted(fetchList)
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   border-top: 0.5px solid var(--separator-opaque);
 }
 
