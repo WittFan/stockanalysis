@@ -35,17 +35,15 @@ def create_app(xlsx_path: str = None, root_path: Path = None) -> Flask:
     from api.handlers.value_matrix_handler import ValueMatrixHandler
     from api.handlers.download_handler import DownloadHandler
 
-    chart_handler    = ChartHandler()
+    chart_handler    = ChartHandler(xlsx_path=xlsx_path)
     backtest_handler = BacktestHandler(root_path=root_path)
-    value_handler    = ValueMatrixHandler()
+    value_handler    = ValueMatrixHandler(xlsx_path=xlsx_path)
     download_handler = DownloadHandler()
 
     if xlsx_path and Path(xlsx_path).exists():
-        chart_handler.init(xlsx_path)
-        value_handler.init(xlsx_path)
-        logger.info(f'股票池已加载：{xlsx_path}')
+        logger.info(f'股票池配置就绪：{xlsx_path}（首次请求时加载）')
     else:
-        logger.warning('未加载股票池，/api/chart 和 /api/industry 不可用')
+        logger.warning('未配置股票池，/api/chart 和 /api/industry 不可用')
 
     # ── 注册蓝图 ──────────────────────────────────────────────────────────────
     from api.routes.chart import make_chart_bp

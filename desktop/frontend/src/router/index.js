@@ -1,11 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Chart     from '@/views/Chart.vue'
-import Industry  from '@/views/Industry.vue'
-import Backtest  from '@/views/Backtest.vue'
-import Value     from '@/views/Value.vue'
-import Download  from '@/views/Download.vue'
-import Assistant from '@/views/Assistant.vue'
-import Settings  from '@/views/Settings.vue'
+
+// 路由懒加载：按页面拆分 chunk，避免首屏加载 2MB 完整 bundle
+const Chart     = () => import('@/views/Chart.vue')
+const Industry  = () => import('@/views/Industry.vue')
+const Backtest  = () => import('@/views/Backtest.vue')
+const Value     = () => import('@/views/Value.vue')
+const Download  = () => import('@/views/Download.vue')
+const Assistant = () => import('@/views/Assistant.vue')
+const Settings  = () => import('@/views/Settings.vue')
 
 const routes = [
   { path: '/',           redirect: '/assistant' },

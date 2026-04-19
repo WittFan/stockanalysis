@@ -42,5 +42,23 @@ export default defineConfig(({ command }) => ({
     // 产物输出到 frontend/dist/（相对于 root: 'frontend'）
     outDir: 'dist',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // 将 Three.js + VRM 拆分为独立 chunk，避免主 bundle 过大
+          if (id.includes('node_modules/three') || id.includes('node_modules/@pixiv/three-vrm')) {
+            return 'three-vrm'
+          }
+          // 将 echarts 拆分为独立 chunk
+          if (id.includes('node_modules/echarts')) {
+            return 'echarts'
+          }
+          // Vue 生态单独打包
+          if (id.includes('node_modules/vue') || id.includes('node_modules/vue-router')) {
+            return 'vue'
+          }
+        },
+      },
+    },
   },
 }))

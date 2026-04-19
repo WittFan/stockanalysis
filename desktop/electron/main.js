@@ -44,6 +44,21 @@ let backendProcess = null
 let viteProcess    = null
 let splashWindow   = null
 
+// 并行启动标志：窗口就绪 + 后端就绪后才显示主窗口
+let windowReady   = false
+let backendReady  = false
+
+function maybeShowWindow() {
+  if (windowReady && backendReady && mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.close()
+      splashWindow = null
+    }
+    mainWindow.show()
+    mainWindow.focus()
+  }
+}
+
 
 // ── 0a. 检测 Vite 开发服务器是否在运行 ───────────────────────────────────────
 
@@ -265,12 +280,8 @@ function createWindow() {
   }
 
   mainWindow.once('ready-to-show', () => {
-    if (splashWindow && !splashWindow.isDestroyed()) {
-      splashWindow.close()
-      splashWindow = null
-    }
-    mainWindow.show()
-    mainWindow.focus()
+    windowReady = true
+    maybeShowWindow()
   })
 
   mainWindow.on('closed', () => { mainWindow = null })
@@ -373,36 +384,30 @@ app.whenReady().then(async () => {
   // 启动前先清理残留进程（避免 DuckDB 文件锁冲突）
   killOldBackend()
 
-  // 开发模式：Vite dev server 已经在运行，无需等待后端（用户手动启动 python run.py）
-  // 生产模式：启动 Flask 子进程并等待就绪
-  if (!isDev) {
-    createSplash()
-    startBackend()
-    try {
-      await waitForBackend()
-    } catch (err) {
-      console.error(err.message)
+  // 并行策略：立即创建窗口（隐藏加载）与启动后端同时进行，
+  // 等前端 ready-to-show 且后端 health check 通过后一并显示，缩短感知启动时间
+  createSplash()
+  createWindow()
+  startBackend()
+
+  try {
+    await waitForBackend()
+    backendReady = true
+    maybeShowWindow()
+  } catch (err) {
+    console.error(err.message)
+    if (!isDev) {
       dialog.showErrorBox('后端启动失败', `${err.message}\n\n请检查日志或重启应用。`)
       app.quit()
       return
     }
-  } else {
-    // 开发模式：启动后端并等待就绪（与生产模式相同的等待逻辑）
-    createSplash()
-    startBackend()
-    try {
-      await waitForBackend()
-    } catch (err) {
-      console.warn(`[dev] 后端未就绪：${err.message}`)
-      // dev 模式不强制退出，窗口仍然打开（可能 API 调用会失败，便于调试）
-      if (splashWindow && !splashWindow.isDestroyed()) {
-        splashWindow.close()
-        splashWindow = null
-      }
+    // dev 模式不强制退出，仅关闭 splash
+    console.warn(`[dev] 后端未就绪：${err.message}`)
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.close()
+      splashWindow = null
     }
   }
-
-  createWindow()
 
   app.on('activate', () => {
     // macOS：点击 Dock 图标时恢复窗口

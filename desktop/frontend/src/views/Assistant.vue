@@ -920,7 +920,12 @@ function animate() {
 
 // ── 生命周期 ──────────────────────────────────────────────
 onMounted(() => {
-  nextTick(() => { initThree() })
+  // 延迟初始化 Three.js，优先保证 DOM/对话区域先渲染
+  // requestIdleCallback 在浏览器空闲时执行；不支持时回退到 setTimeout
+  nextTick(() => {
+    const defer = window.requestIdleCallback || ((cb) => setTimeout(cb, 200))
+    defer(() => { initThree() })
+  })
 })
 onUnmounted(() => {
   cancelAnimationFrame(animFrameId)

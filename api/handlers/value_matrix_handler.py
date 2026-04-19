@@ -148,13 +148,18 @@ def fetch_latest_year_data(symbols: list, latest_year: int) -> pd.DataFrame:
 class ValueMatrixHandler:
     """处理 /api/value/data、/api/value/forecast 请求，返回纯 JSON 数据（供前端 ECharts 使用）。"""
 
-    def __init__(self):
+    def __init__(self, xlsx_path: str = None):
         self.code_to_name: dict = {}
         self.symbols: list = []
+        self._xlsx_path = xlsx_path
 
-    def init(self, xlsx_path: str):
-        self.code_to_name = load_stockpool(xlsx_path)
-        self.symbols = list(self.code_to_name.keys())
+    def _ensure_init(self):
+        """懒加载股票池，首次请求时才读取 xlsx"""
+        if self.code_to_name:
+            return
+        if self._xlsx_path and Path(self._xlsx_path).exists():
+            self.code_to_name = load_stockpool(self._xlsx_path)
+            self.symbols = list(self.code_to_name.keys())
 
     @staticmethod
     def _parse_params(qs: dict) -> tuple:

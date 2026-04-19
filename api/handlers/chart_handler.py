@@ -187,16 +187,22 @@ def build_industry_data(df_norm: pd.DataFrame, code_to_name: dict,
 class ChartHandler:
     """处理 /api/chart 和 /api/industry 请求，返回纯 JSON 数据（供前端 ECharts 使用）。"""
 
-    def __init__(self):
+    def __init__(self, xlsx_path: str = None):
         self.code_to_name: dict = {}
         self.symbols: list      = []
+        self._xlsx_path = xlsx_path
 
-    def init(self, xlsx_path: str):
-        self.code_to_name = load_stockpool(xlsx_path)
-        self.symbols      = list(self.code_to_name.keys())
+    def _ensure_init(self):
+        """懒加载股票池，首次请求时才读取 xlsx"""
+        if self.code_to_name:
+            return
+        if self._xlsx_path and Path(self._xlsx_path).exists():
+            self.code_to_name = load_stockpool(self._xlsx_path)
+            self.symbols      = list(self.code_to_name.keys())
 
     def handle_chart(self, period: int) -> dict:
         """返回 {dates, series, count}"""
+        self._ensure_init()
         if not chart_cache.has(period):
             df_norm = load_and_normalize(self.symbols, period)
             data    = build_chart_data(df_norm, self.code_to_name, period)
@@ -206,6 +212,7 @@ class ChartHandler:
 
     def handle_industry(self, period: int) -> dict:
         """返回 {dates, groups, total}"""
+        self._ensure_init()
         if not industry_cache.has(period):
             df_norm = load_and_normalize(self.symbols, period)
             ind_map = load_industry_map(self.symbols)
